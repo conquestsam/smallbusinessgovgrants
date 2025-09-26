@@ -36,11 +36,11 @@ export default function RegisterPage() {
       confirmPassword: '',
     },
     validate: {
-      firstName: (value) => (value.length < 2 ? 'First name must be at least 2 characters' : null),
-      lastName: (value) => (value.length < 2 ? 'Last name must be at least 2 characters' : null),
-      email: (value) => (/^\S+@\S+$/.test(value) ? null : 'Invalid email'),
-      password: (value) => (value.length < 6 ? 'Password must be at least 6 characters' : null),
-      confirmPassword: (value, values) =>
+      firstName: (value:string) => (value.length < 2 ? 'First name must be at least 2 characters' : null),
+      lastName: (value:string) => (value.length < 2 ? 'Last name must be at least 2 characters' : null),
+      email: (value:string) => (/^\S+@\S+$/.test(value) ? null : 'Invalid email'),
+      password: (value:string) => (value.length < 6 ? 'Password must be at least 6 characters' : null),
+      confirmPassword: (value:string, values) =>
         value !== values.password ? 'Passwords did not match' : null,
     },
   });
