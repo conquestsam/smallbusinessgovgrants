@@ -40,7 +40,7 @@ export default function RegisterPage() {
       lastName: (value:string) => (value.length < 2 ? 'Last name must be at least 2 characters' : null),
       email: (value:string) => (/^\S+@\S+$/.test(value) ? null : 'Invalid email'),
       password: (value:string) => (value.length < 6 ? 'Password must be at least 6 characters' : null),
-      confirmPassword: (value:string, values) =>
+      confirmPassword: (value:string, values:string) =>
         value !== values.password ? 'Passwords did not match' : null,
     },
   });
