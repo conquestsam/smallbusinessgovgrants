@@ -31,37 +31,47 @@ const WithdrawPage = observer(() => {
     },
   ];
 
-  const form = useForm({
-    initialValues: {
-      applicationId: '',
-      amount: '',
-      bankName: '',
-      accountNumber: '',
-      routingNumber: '',
-      accountHolderName: '',
-      confirmAccountNumber: '',
+  interface WithdrawalFormValues {
+  applicationId: string;
+  amount: string;
+  bankName: string;
+  accountNumber: string;
+  routingNumber: string;
+  accountHolderName: string;
+  confirmAccountNumber: string;
+}
+
+const form = useForm<WithdrawalFormValues>({
+  initialValues: {
+    applicationId: '',
+    amount: '',
+    bankName: '',
+    accountNumber: '',
+    routingNumber: '',
+    accountHolderName: '',
+    confirmAccountNumber: '',
+  },
+  validate: {
+    applicationId: (value) => (!value ? 'Please select an application' : null),
+    amount: (value) => {
+      if (!value) return 'Amount is required';
+      const numValue = Number(value);
+      if (numValue <= 0) return 'Amount must be greater than 0';
+      if (numValue > 20000) return 'Maximum withdrawal amount is $20,000';
+      return null;
     },
-    validate: {
-      applicationId: (value) => (!value ? 'Please select an application' : null),
-      amount: (value) => {
-        if (!value) return 'Amount is required';
-        const numValue = Number(value);
-        if (numValue <= 0) return 'Amount must be greater than 0';
-        if (numValue > 20000) return 'Maximum withdrawal amount is $20,000'; // Available amount check
-        return null;
-      },
-      bankName: (value) => (!value ? 'Bank name is required' : null),
-      accountNumber: (value) => (!value ? 'Account number is required' : null),
-      routingNumber: (value) => {
-        if (!value) return 'Routing number is required';
-        if (!/^\d{9}$/.test(value)) return 'Routing number must be 9 digits';
-        return null;
-      },
-      accountHolderName: (value) => (!value ? 'Account holder name is required' : null),
-      confirmAccountNumber: (value, values) =>
-        value !== values.accountNumber ? 'Account numbers do not match' : null,
+    bankName: (value) => (!value ? 'Bank name is required' : null),
+    accountNumber: (value) => (!value ? 'Account number is required' : null),
+    routingNumber: (value) => {
+      if (!value) return 'Routing number is required';
+      if (!/^\d{9}$/.test(value)) return 'Routing number must be 9 digits';
+      return null;
     },
-  });
+    accountHolderName: (value) => (!value ? 'Account holder name is required' : null),
+    confirmAccountNumber: (value, values) =>
+      value !== values.accountNumber ? 'Account numbers do not match' : null,
+  },
+});
 
   if (!authStore.isAuthenticated) {
     return null;
