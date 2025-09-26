@@ -33,8 +33,8 @@ const LoginPage = observer(() => {
       password: '',
     },
     validate: {
-      email: (value) => (/^\S+@\S+$/.test(value) ? null : 'Invalid email'),
-      password: (value) => (value.length < 6 ? 'Password must be at least 6 characters' : null),
+      email: (value:string) => (/^\S+@\S+$/.test(value) ? null : 'Invalid email'),
+      password: (value:string) => (value.length < 6 ? 'Password must be at least 6 characters' : null),
     },
   });
 
