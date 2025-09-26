@@ -26,24 +26,33 @@ export default function RegisterPage() {
   const [error, setError] = useState('');
   const router = useRouter();
 
-  const form = useForm({
-    initialValues: {
-      firstName: '',
-      lastName: '',
-      email: '',
-      phone: '',
-      password: '',
-      confirmPassword: '',
-    },
-    validate: {
-      firstName: (value:string) => (value.length < 2 ? 'First name must be at least 2 characters' : null),
-      lastName: (value:string) => (value.length < 2 ? 'Last name must be at least 2 characters' : null),
-      email: (value:string) => (/^\S+@\S+$/.test(value) ? null : 'Invalid email'),
-      password: (value:string) => (value.length < 6 ? 'Password must be at least 6 characters' : null),
-      confirmPassword: (value:string, values:string) =>
-        value !== values.password ? 'Passwords did not match' : null,
-    },
-  });
+ interface RegisterFormValues {
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  password: string;
+  confirmPassword: string;
+}
+
+const form = useForm<RegisterFormValues>({
+  initialValues: {
+    firstName: '',
+    lastName: '',
+    email: '',
+    phone: '',
+    password: '',
+    confirmPassword: '',
+  },
+  validate: {
+    firstName: (value) => (value.length < 2 ? 'First name must be at least 2 characters' : null),
+    lastName: (value) => (value.length < 2 ? 'Last name must be at least 2 characters' : null),
+    email: (value) => (/^\S+@\S+$/.test(value) ? null : 'Invalid email'),
+    password: (value) => (value.length < 6 ? 'Password must be at least 6 characters' : null),
+    confirmPassword: (value, values) =>
+      value !== values.password ? 'Passwords did not match' : null,
+  },
+});
 
   const handleRegister = async (values: typeof form.values) => {
     setIsLoading(true);
