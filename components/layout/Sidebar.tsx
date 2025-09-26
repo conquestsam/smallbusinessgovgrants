@@ -16,12 +16,20 @@ import {
 } from '@tabler/icons-react';
 import { authStore } from '@/lib/stores/auth.store';
 import { useRouter, usePathname } from 'next/navigation';
+import { IconProps } from '@tabler/icons-react';
 
 interface SidebarProps {
   onItemClick?: () => void;
 }
 
-const userMenuItems = [
+interface MenuItem {
+  label: string;
+  icon: React.ComponentType<IconProps>;
+  href: string;
+  badge?: string;
+}
+
+const userMenuItems: MenuItem[] = [
   { label: 'Dashboard', icon: IconDashboard, href: '/dashboard' },
   { label: 'Application Status', icon: IconFileText, href: '/dashboard/applications' },
   { label: 'Create Application', icon: IconPlus, href: '/dashboard/apply' },
@@ -30,7 +38,7 @@ const userMenuItems = [
   { label: 'Settings', icon: IconSettings, href: '/dashboard/settings' },
 ];
 
-const adminMenuItems = [
+const adminMenuItems: MenuItem[] = [
   { label: 'Admin Dashboard', icon: IconDashboard, href: '/admin' },
   { label: 'Applications', icon: IconFileText, href: '/admin/applications', badge: '12' },
   { label: 'Withdrawals', icon: IconCreditCard, href: '/admin/withdrawals', badge: '5' },
