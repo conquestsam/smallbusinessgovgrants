@@ -129,7 +129,7 @@ const ApplyPage = observer(() => {
         </Title>
 
         <Card withBorder radius="md" shadow="sm" p="xl">
-          <Stepper active={active} onStepClick={setActive} breakpoint="sm" mb="xl">
+          <Stepper active={active} onStepClick={setActive} mb="xl">
             <Stepper.Step label="Business Information" description="Basic business details">
               <BusinessInfoStep form={form} />
             </Stepper.Step>
