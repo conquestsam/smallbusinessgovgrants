@@ -4,7 +4,7 @@ import { observer } from 'mobx-react-lite';
 import { Container, Title, Card, Button, Group, Text, Select, NumberInput, TextInput, Alert, Grid, Loader } from '@mantine/core';
 import { useForm } from '@mantine/form';
 import { notifications } from '@mantine/notifications';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { authStore } from '@/lib/stores/auth.store';
 import { useRouter } from 'next/navigation';
@@ -59,6 +59,7 @@ const WithdrawPage = observer(() => {
     enabled: !!authStore.user?.id && authStore.isAuthenticated,
   });
 
+  // FIXED: Use useMemo to avoid circular references in form validation
   const form = useForm<WithdrawalFormValues>({
     initialValues: {
       applicationId: '',
@@ -69,32 +70,62 @@ const WithdrawPage = observer(() => {
       accountHolderName: '',
       confirmAccountNumber: '',
     },
-    validate: {
-      applicationId: (value) => (!value ? 'Please select an application' : null),
-      amount: (value) => {
-        if (!value) return 'Amount is required';
-        const numValue = Number(value);
-        if (numValue <= 0) return 'Amount must be greater than 0';
-        if (numValue > 50000) return 'Maximum withdrawal amount is $50,000';
-        
-        // Validate against available amount
-        const selectedApp = approvedApplications.find(app => app.id === form.values.applicationId);
-        if (selectedApp && numValue > (selectedApp.approvedAmount - selectedApp.totalWithdrawn)) {
-          return `Amount exceeds available balance of $${(selectedApp.approvedAmount - selectedApp.totalWithdrawn).toLocaleString()}`;
+    
+    // FIXED: Move validation functions outside to avoid circular references
+    validate: (values) => {
+      const errors: Record<string, string | null> = {};
+      
+      // Application ID validation
+      if (!values.applicationId) {
+        errors.applicationId = 'Please select an application';
+      }
+      
+      // Amount validation
+      if (!values.amount) {
+        errors.amount = 'Amount is required';
+      } else {
+        const numValue = Number(values.amount);
+        if (numValue <= 0) {
+          errors.amount = 'Amount must be greater than 0';
+        } else if (numValue > 50000) {
+          errors.amount = 'Maximum withdrawal amount is $50,000';
+        } else {
+          // Validate against available amount
+          const selectedApp = approvedApplications.find(app => app.id === values.applicationId);
+          if (selectedApp && numValue > (selectedApp.approvedAmount - selectedApp.totalWithdrawn)) {
+            errors.amount = `Amount exceeds available balance of $${(selectedApp.approvedAmount - selectedApp.totalWithdrawn).toLocaleString()}`;
+          }
         }
-        
-        return null;
-      },
-      bankName: (value) => (!value ? 'Bank name is required' : null),
-      accountNumber: (value) => (!value ? 'Account number is required' : null),
-      routingNumber: (value) => {
-        if (!value) return 'Routing number is required';
-        if (!/^\d{9}$/.test(value)) return 'Routing number must be 9 digits';
-        return null;
-      },
-      accountHolderName: (value) => (!value ? 'Account holder name is required' : null),
-      confirmAccountNumber: (value, values) =>
-        value !== values.accountNumber ? 'Account numbers do not match' : null,
+      }
+      
+      // Bank name validation
+      if (!values.bankName) {
+        errors.bankName = 'Bank name is required';
+      }
+      
+      // Account number validation
+      if (!values.accountNumber) {
+        errors.accountNumber = 'Account number is required';
+      }
+      
+      // Routing number validation
+      if (!values.routingNumber) {
+        errors.routingNumber = 'Routing number is required';
+      } else if (!/^\d{9}$/.test(values.routingNumber)) {
+        errors.routingNumber = 'Routing number must be 9 digits';
+      }
+      
+      // Account holder name validation
+      if (!values.accountHolderName) {
+        errors.accountHolderName = 'Account holder name is required';
+      }
+      
+      // Confirm account number validation
+      if (values.confirmAccountNumber !== values.accountNumber) {
+        errors.confirmAccountNumber = 'Account numbers do not match';
+      }
+      
+      return errors;
     },
   });
 
@@ -102,17 +133,25 @@ const WithdrawPage = observer(() => {
     return null;
   }
 
-  // CHANGED: Format applications for Select component
-  const applicationOptions = approvedApplications.map(app => ({
-    value: app.id,
-    label: `${app.businessName} - $${(app.approvedAmount - app.totalWithdrawn).toLocaleString()} available`,
-    availableAmount: app.approvedAmount - app.totalWithdrawn,
-  }));
+  // FIXED: Use useMemo to optimize application options
+  const applicationOptions = useMemo(() => 
+    approvedApplications.map(app => ({
+      value: app.id,
+      label: `${app.businessName} - $${(app.approvedAmount - app.totalWithdrawn).toLocaleString()} available`,
+      availableAmount: app.approvedAmount - app.totalWithdrawn,
+    })),
+    [approvedApplications]
+  );
 
-  const selectedApp = approvedApplications.find(app => app.id === form.values.applicationId);
+  // FIXED: Explicitly type selectedApp
+  const selectedApp: Application | undefined = useMemo(() => 
+    approvedApplications.find(app => app.id === form.values.applicationId),
+    [approvedApplications, form.values.applicationId]
+  );
+
   const availableAmount = selectedApp ? selectedApp.approvedAmount - selectedApp.totalWithdrawn : 0;
 
-  const handleSubmit = async (values: typeof form.values) => {
+  const handleSubmit = async (values: WithdrawalFormValues) => {
     setIsSubmitting(true);
     
     try {
