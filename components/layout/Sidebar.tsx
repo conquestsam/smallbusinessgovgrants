@@ -1,6 +1,7 @@
 'use client';
 
 import { observer } from 'mobx-react-lite';
+import { useQuery } from '@tanstack/react-query';
 import { NavLink, Stack, Text, Badge } from '@mantine/core';
 import { 
   IconDashboard, 
@@ -16,15 +17,11 @@ import {
 } from '@tabler/icons-react';
 import { authStore } from '@/lib/stores/auth.store';
 import { useRouter, usePathname } from 'next/navigation';
-import { IconProps } from '@tabler/icons-react';
 
-interface SidebarProps {
-  onItemClick?: () => void;
-}
-
+// Define interface for menu items
 interface MenuItem {
   label: string;
-  icon: React.ComponentType<IconProps>;
+  icon: React.ComponentType<any>;
   href: string;
   badge?: string;
 }
@@ -40,39 +37,55 @@ const userMenuItems: MenuItem[] = [
 
 const adminMenuItems: MenuItem[] = [
   { label: 'Admin Dashboard', icon: IconDashboard, href: '/admin' },
-  { label: 'Applications', icon: IconFileText, href: '/admin/applications', badge: '12' },
-  { label: 'Withdrawals', icon: IconCreditCard, href: '/admin/withdrawals', badge: '5' },
+  { label: 'Applications', icon: IconFileText, href: '/admin/applications' },
+  { label: 'Withdrawals', icon: IconCreditCard, href: '/admin/withdrawals' },
   { label: 'Users Management', icon: IconUsers, href: '/admin/users' },
   { label: 'Analytics', icon: IconChartBar, href: '/admin/analytics' },
   { label: 'System Settings', icon: IconSettings, href: '/admin/settings' },
   { label: 'Email Center', icon: IconMail, href: '/admin/emails' },
 ];
 
-export const Sidebar = observer(({ onItemClick }: SidebarProps) => {
+// CHANGED: Add real-time badge counts using React Query
+export const Sidebar = observer(() => {
   const router = useRouter();
   const pathname = usePathname();
   
-  const menuItems = authStore.isAdmin ? adminMenuItems : userMenuItems;
-
-  const handleItemClick = (href: string) => {
-    router.push(href);
-    // Close mobile sidebar when item is clicked
-    if (onItemClick) {
-      onItemClick();
-    }
-  };
+  // NEW: Fetch pending counts for admin badges
+  const { data: pendingCounts } = useQuery({
+    queryKey: ['pending-counts'],
+    queryFn: async () => {
+      if (!authStore.isAdmin) return { applications: 0, withdrawals: 0 };
+      
+      const [appsRes, withdrawalsRes] = await Promise.all([
+        fetch('/api/admin/applications'),
+        fetch('/api/admin/withdrawals')
+      ]);
+      
+      const apps = await appsRes.json();
+      const withdrawals = await withdrawalsRes.json();
+      
+      return {
+        applications: apps.filter((app: any) => app.status === 'pending').length,
+        withdrawals: withdrawals.filter((w: any) => w.status === 'pending').length,
+      };
+    },
+    enabled: authStore.isAdmin,
+    refetchInterval: 30000, // Refresh every 30 seconds
+  });
+  
+  // CHANGED: Add dynamic badges to admin menu items with proper typing
+  const menuItems: MenuItem[] = authStore.isAdmin 
+    ? adminMenuItems.map(item => ({
+        ...item,
+        badge: item.href === '/admin/applications' ? pendingCounts?.applications?.toString() :
+               item.href === '/admin/withdrawals' ? pendingCounts?.withdrawals?.toString() :
+               undefined
+      })) 
+    : userMenuItems;
 
   return (
-    <Stack gap="sm" p="sm">
-      <Text 
-        size="sm" 
-        c="dimmed" 
-        fw={700} 
-        tt="uppercase" 
-        mb="md" 
-        ta="center"
-        style={{ letterSpacing: '0.5px' }}
-      >
+    <Stack gap="md" mt="lg">
+      <Text size="xs" c="dimmed" fw={500} tt="uppercase" mb="md">
         {authStore.isAdmin ? 'Admin Panel' : 'My Dashboard'}
       </Text>
       
@@ -80,15 +93,11 @@ export const Sidebar = observer(({ onItemClick }: SidebarProps) => {
         <NavLink
           key={item.href}
           href={item.href}
-          label={
-            <Text size="md" fw={500}>
-              {item.label}
-            </Text>
-          }
-          leftSection={<item.icon size={22} stroke={1.5} />}
+          label={item.label}
+          leftSection={<item.icon size={24} />}
           rightSection={
             item.badge ? (
-              <Badge size="sm" variant="filled" color="red" circle>
+              <Badge size="xs" variant="filled" color="red">
                 {item.badge}
               </Badge>
             ) : null
@@ -96,36 +105,27 @@ export const Sidebar = observer(({ onItemClick }: SidebarProps) => {
           active={pathname === item.href}
           onClick={(event) => {
             event.preventDefault();
-            handleItemClick(item.href);
+            router.push(item.href);
           }}
           styles={{
             root: {
-              borderRadius: '12px',
-              marginBottom: '8px',
+              borderRadius: 8,
+              marginBottom: 8,
               padding: '12px 16px',
               minHeight: '52px',
-              transition: 'all 0.2s ease',
-              '&[data-active]': {
-                backgroundColor: '#002e6d',
-                color: 'white',
-                '&:hover': {
-                  backgroundColor: '#005ea2',
-                },
-              },
-              '&:hover': {
-                backgroundColor: '#f1f5f9',
-                transform: 'translateX(4px)',
-              },
             },
             label: {
-              fontSize: '15px',
-              fontWeight: 600,
+              fontSize: '16px',
+              fontWeight: 500,
+            },
+            // FIXED: Use correct style properties for leftSection
+            section: {
+              marginRight: '12px', // Increased space between icon and text
+              display: 'flex',
+              alignItems: 'center',
             },
             body: {
-              gap: '12px',
-            },
-            section: {
-              marginRight: '12px',
+              alignItems: 'center',
             }
           }}
         />

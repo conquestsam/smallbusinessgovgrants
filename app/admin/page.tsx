@@ -1,6 +1,7 @@
 'use client';
 
 import { observer } from 'mobx-react-lite';
+import { useQuery } from '@tanstack/react-query';
 import { Container, Grid, Title, Text, Card, Group, Progress, Badge, Table } from '@mantine/core';
 import { IconFileText, IconClock, IconCheck, IconCurrencyDollar, IconUsers, IconTrendingUp } from '@tabler/icons-react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
@@ -8,6 +9,34 @@ import { StatsCard } from '@/components/dashboard/StatsCard';
 import { authStore } from '@/lib/stores/auth.store';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
+
+// Add these interfaces at the top of your file
+interface User {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  isActive: boolean;
+}
+
+interface Application {
+  id: string;
+  applicationId: string;
+  businessName: string;
+  requestedAmount: number;
+  approvedAmount?: number;
+  status: 'pending' | 'approved' | 'rejected';
+  createdAt: string;
+  reviewedAt?: string;
+  user: User;
+}
+
+interface Withdrawal {
+  id: string;
+  amount: number;
+  status: 'pending' | 'completed' | 'failed';
+  createdAt: string;
+}
 
 const AdminDashboard = observer(() => {
   const router = useRouter();
@@ -18,81 +47,97 @@ const AdminDashboard = observer(() => {
     }
   }, [authStore.isAuthenticated, authStore.isAdmin, router]);
 
+  // CHANGED: Add proper typing to useQuery hooks
+  const { data: applications = [] } = useQuery<Application[]>({
+    queryKey: ['admin-applications'],
+    queryFn: async () => {
+      const response = await fetch('/api/admin/applications');
+      if (!response.ok) throw new Error('Failed to fetch applications');
+      return response.json();
+    },
+    enabled: authStore.isAdmin,
+  });
+
+  const { data: withdrawals = [] } = useQuery<Withdrawal[]>({
+    queryKey: ['admin-withdrawals'],
+    queryFn: async () => {
+      const response = await fetch('/api/admin/withdrawals');
+      if (!response.ok) throw new Error('Failed to fetch withdrawals');
+      return response.json();
+    },
+    enabled: authStore.isAdmin,
+  });
+
+  const { data: users = [] } = useQuery<User[]>({
+    queryKey: ['admin-users'],
+    queryFn: async () => {
+      const response = await fetch('/api/admin/users');
+      if (!response.ok) throw new Error('Failed to fetch users');
+      return response.json();
+    },
+    enabled: authStore.isAdmin,
+  });
+
   if (!authStore.isAuthenticated || !authStore.isAdmin) {
     return null;
   }
 
-  // Mock admin data
+  // CHANGED: Calculate real statistics from database with proper typing
+  const totalDisbursed = withdrawals
+    .filter((w: Withdrawal) => w.status === 'completed')
+    .reduce((sum: number, w: Withdrawal) => sum + Number(w.amount), 0);
+
+  const totalApproved = applications
+    .filter((app: Application) => app.status === 'approved')
+    .reduce((sum: number, app: Application) => sum + Number(app.approvedAmount || 0), 0);
+
   const stats = [
     {
       title: 'Total Applications',
-      value: '247',
-      change: 12.5,
+      value: applications.length.toString(),
       icon: <IconFileText size={20} />,
       color: 'blue',
     },
     {
       title: 'Pending Review',
-      value: '23',
+      value: applications.filter((app: Application) => app.status === 'pending').length.toString(),
       icon: <IconClock size={20} />,
       color: 'orange',
     },
     {
       title: 'Approved This Month',
-      value: '45',
-      change: 8.2,
+      value: applications.filter((app: Application) => 
+        app.status === 'approved' && 
+        new Date(app.reviewedAt || '').getMonth() === new Date().getMonth()
+      ).length.toString(),
       icon: <IconCheck size={20} />,
       color: 'green',
     },
     {
       title: 'Total Disbursed',
-      value: '$2.4M',
-      change: 15.3,
+      value: `$${(totalDisbursed / 1000000).toFixed(1)}M`,
       icon: <IconCurrencyDollar size={20} />,
       color: 'teal',
     },
     {
       title: 'Active Users',
-      value: '1,234',
-      change: 5.7,
+      value: users.filter((user: User) => user.isActive).length.toString(),
       icon: <IconUsers size={20} />,
       color: 'violet',
     },
     {
       title: 'Success Rate',
-      value: '87%',
-      change: 2.1,
+      value: applications.length > 0 ? 
+        `${Math.round((applications.filter((app: Application) => app.status === 'approved').length / applications.length) * 100)}%` : '0%',
       icon: <IconTrendingUp size={20} />,
       color: 'indigo',
     },
   ];
 
-  const recentApplications = [
-    {
-      id: 'APP-2024-045',
-      businessName: 'Green Tech Solutions',
-      amount: 75000,
-      status: 'pending',
-      submittedAt: '2024-01-28',
-      applicant: 'John Smith',
-    },
-    {
-      id: 'APP-2024-044',
-      businessName: 'Local Bakery Co',
-      amount: 25000,
-      status: 'approved',
-      submittedAt: '2024-01-27',
-      applicant: 'Sarah Johnson',
-    },
-    {
-      id: 'APP-2024-043',
-      businessName: 'Tech Startup Inc',
-      amount: 100000,
-      status: 'pending',
-      submittedAt: '2024-01-26',
-      applicant: 'Mike Davis',
-    },
-  ];
+  // CHANGED: Use real recent applications with user data and proper typing
+  const recentApplications = applications
+    .sort((a: Application, b: Application) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    .slice(0, 5);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -148,19 +193,19 @@ const AdminDashboard = observer(() => {
                   </Table.Tr>
                 </Table.Thead>
                 <Table.Tbody>
-                  {recentApplications.map((app) => (
+                  {recentApplications.map((app: Application) => (
                     <Table.Tr key={app.id}>
                       <Table.Td>
-                        <Text fw={500} size="sm">{app.id}</Text>
+                        <Text fw={500} size="sm">{app.applicationId}</Text>
                       </Table.Td>
                       <Table.Td>
                         <Text fw={600}>{app.businessName}</Text>
                       </Table.Td>
                       <Table.Td>
-                        <Text size="sm">{app.applicant}</Text>
+                        <Text size="sm">{app.user?.firstName} {app.user?.lastName}</Text>
                       </Table.Td>
                       <Table.Td>
-                        <Text fw={600}>${app.amount.toLocaleString()}</Text>
+                        <Text fw={600}>${Number(app.requestedAmount).toLocaleString()}</Text>
                       </Table.Td>
                       <Table.Td>
                         <Badge color={getStatusColor(app.status)} variant="light">
@@ -168,7 +213,7 @@ const AdminDashboard = observer(() => {
                         </Badge>
                       </Table.Td>
                       <Table.Td>
-                        <Text size="sm">{new Date(app.submittedAt).toLocaleDateString()}</Text>
+                        <Text size="sm">{new Date(app.createdAt).toLocaleDateString()}</Text>
                       </Table.Td>
                     </Table.Tr>
                   ))}

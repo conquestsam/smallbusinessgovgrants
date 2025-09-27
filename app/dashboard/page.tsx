@@ -1,11 +1,14 @@
 'use client';
 
 import { observer } from 'mobx-react-lite';
+import { useQuery } from '@tanstack/react-query';
 import { Container, Grid, Title, Text, Card, Group, Progress, Badge } from '@mantine/core';
 import { IconFileText, IconClock, IconCheck, IconCurrencyDollar } from '@tabler/icons-react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { StatsCard } from '@/components/dashboard/StatsCard';
 import { authStore } from '@/lib/stores/auth.store';
+import { applicationStore } from '@/lib/stores/application.store';
+import { withdrawalStore } from '@/lib/stores/withdrawal.store';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 
@@ -18,64 +21,68 @@ const DashboardPage = observer(() => {
     }
   }, [authStore.isAuthenticated, router]);
 
+  // CHANGED: Fetch real data from API instead of mock data
+  const { data: applications = [] } = useQuery({
+    queryKey: ['user-applications', authStore.user?.id],
+    queryFn: async () => {
+      const response = await fetch(`/api/applications?userId=${authStore.user?.id}`);
+      if (!response.ok) throw new Error('Failed to fetch applications');
+      return response.json();
+    },
+    enabled: !!authStore.user?.id,
+  });
+
+  const { data: withdrawals = [] } = useQuery({
+    queryKey: ['user-withdrawals', authStore.user?.id],
+    queryFn: async () => {
+      const response = await fetch(`/api/withdrawals?userId=${authStore.user?.id}`);
+      if (!response.ok) throw new Error('Failed to fetch withdrawals');
+      return response.json();
+    },
+    enabled: !!authStore.user?.id,
+  });
   if (!authStore.isAuthenticated) {
     return null;
   }
 
-  // Mock data - in real app, this would come from stores/API
+  // CHANGED: Calculate real statistics from database data
+  const totalApproved = applications
+    .filter((app: any) => app.status === 'approved')
+    .reduce((sum: number, app: any) => sum + Number(app.approvedAmount || 0), 0);
+
+  const totalWithdrawn = withdrawals
+    .filter((w: any) => w.status === 'completed')
+    .reduce((sum: number, w: any) => sum + Number(w.amount), 0);
+
   const stats = [
     {
       title: 'Total Applications',
-      value: '3',
-      change: 12.5,
+      value: applications.length.toString(),
       icon: <IconFileText size={20} />,
       color: 'blue',
     },
     {
       title: 'Pending Review',
-      value: '1',
+      value: applications.filter((app: any) => app.status === 'pending').length.toString(),
       icon: <IconClock size={20} />,
       color: 'orange',
     },
     {
       title: 'Approved',
-      value: '2',
-      change: 8.2,
+      value: applications.filter((app: any) => app.status === 'approved').length.toString(),
       icon: <IconCheck size={20} />,
       color: 'green',
     },
     {
       title: 'Total Approved',
-      value: '$125,000',
-      change: 15.3,
+      value: `$${totalApproved.toLocaleString()}`,
       icon: <IconCurrencyDollar size={20} />,
       color: 'teal',
     },
   ];
 
-  const recentApplications = [
-    {
-      id: 'APP-2024-001',
-      businessName: 'Tech Innovations LLC',
-      amount: 50000,
-      status: 'approved',
-      date: '2024-01-15',
-    },
-    {
-      id: 'APP-2024-002',
-      businessName: 'Green Energy Solutions',
-      amount: 75000,
-      status: 'pending',
-      date: '2024-01-20',
-    },
-    {
-      id: 'APP-2024-003',
-      businessName: 'Local Restaurant Chain',
-      amount: 30000,
-      status: 'approved',
-      date: '2024-01-25',
-    },
-  ];
+  // CHANGED: Use real applications data
+  const recentApplications = applications.slice(0, 3);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -119,18 +126,18 @@ const DashboardPage = observer(() => {
                 Recent Applications
               </Title>
               
-              {recentApplications.map((app) => (
+              {recentApplications.length > 0 ? recentApplications.map((app: any) => (
                 <Card key={app.id} withBorder mb="sm" p="md">
                   <Group justify="space-between">
                     <div>
                       <Text fw={600}>{app.businessName}</Text>
                       <Text size="sm" c="dimmed">
-                        {app.id} • Applied on {new Date(app.date).toLocaleDateString()}
+                        {app.applicationId} • Applied on {new Date(app.createdAt).toLocaleDateString()}
                       </Text>
                     </div>
                     <div style={{ textAlign: 'right' }}>
                       <Text fw={600} size="lg">
-                        ${app.amount.toLocaleString()}
+                        ${Number(app.requestedAmount).toLocaleString()}
                       </Text>
                       <Badge color={getStatusColor(app.status)} variant="light">
                         {app.status.toUpperCase()}
@@ -138,7 +145,11 @@ const DashboardPage = observer(() => {
                     </div>
                   </Group>
                 </Card>
-              ))}
+              )) : (
+                <Text c="dimmed" ta="center" py="xl">
+                  No applications yet. Create your first application to get started.
+                </Text>
+              )}
             </Card>
           </Grid.Col>
 

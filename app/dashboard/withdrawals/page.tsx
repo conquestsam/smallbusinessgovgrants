@@ -1,12 +1,28 @@
 'use client';
 
 import { observer } from 'mobx-react-lite';
+import { useQuery } from '@tanstack/react-query';
 import { Container, Title, Card, Group, Button, Badge, Text, Grid, Table, ActionIcon } from '@mantine/core';
 import { IconPlus, IconDownload, IconEye } from '@tabler/icons-react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { authStore } from '@/lib/stores/auth.store';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
+
+// Add interface for withdrawal data
+interface Withdrawal {
+  id: string;
+  withdrawalId: string;
+  userId: string;
+  applicationId: string;
+  amount: string;
+  bankName: string;
+  accountNumber: string;
+  accountHolderName: string;
+  status: 'pending' | 'processing' | 'completed' | 'rejected';
+  processedAt?: string;
+  createdAt: string;
+}
 
 const WithdrawalsPage = observer(() => {
   const router = useRouter();
@@ -17,34 +33,20 @@ const WithdrawalsPage = observer(() => {
     }
   }, [authStore.isAuthenticated, router]);
 
+  // CHANGED: Add proper typing to useQuery hook
+  const { data: withdrawals = [] } = useQuery<Withdrawal[]>({
+    queryKey: ['user-withdrawals', authStore.user?.id],
+    queryFn: async () => {
+      const response = await fetch(`/api/withdrawals?userId=${authStore.user?.id}`);
+      if (!response.ok) throw new Error('Failed to fetch withdrawals');
+      return response.json();
+    },
+    enabled: !!authStore.user?.id,
+  });
+
   if (!authStore.isAuthenticated) {
     return null;
   }
-
-  // Mock data - in real app, this would come from API
-  const withdrawals = [
-    {
-      id: '1',
-      withdrawalId: 'WD-2024-001',
-      applicationId: 'APP-2024-001',
-      amount: 25000,
-      status: 'completed',
-      bankName: 'Chase Bank',
-      accountNumber: '****1234',
-      processedAt: new Date('2024-01-20'),
-      createdAt: new Date('2024-01-18'),
-    },
-    {
-      id: '2',
-      withdrawalId: 'WD-2024-002',
-      applicationId: 'APP-2024-001',
-      amount: 20000,
-      status: 'pending',
-      bankName: 'Bank of America',
-      accountNumber: '****5678',
-      createdAt: new Date('2024-01-25'),
-    },
-  ];
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -61,13 +63,28 @@ const WithdrawalsPage = observer(() => {
     }
   };
 
+  // CHANGED: Calculate real statistics with proper typing
   const totalWithdrawn = withdrawals
-    .filter(w => w.status === 'completed')
-    .reduce((sum, w) => sum + w.amount, 0);
+    .filter((w: Withdrawal) => w.status === 'completed')
+    .reduce((sum: number, w: Withdrawal) => sum + Number(w.amount), 0);
 
   const pendingAmount = withdrawals
-    .filter(w => w.status === 'pending')
-    .reduce((sum, w) => sum + w.amount, 0);
+    .filter((w: Withdrawal) => w.status === 'pending')
+    .reduce((sum: number, w: Withdrawal) => sum + Number(w.amount), 0);
+
+  // CHANGED: Calculate success rate with proper typing
+  const successRate = withdrawals.length > 0 
+    ? Math.round((withdrawals.filter((w: Withdrawal) => w.status === 'completed').length / withdrawals.length) * 100)
+    : 0;
+
+  // CHANGED: Format date safely
+  const formatDate = (dateString: string) => {
+    try {
+      return new Date(dateString).toLocaleDateString();
+    } catch {
+      return 'Invalid date';
+    }
+  };
 
   return (
     <DashboardLayout>
@@ -130,7 +147,7 @@ const WithdrawalsPage = observer(() => {
                 Success Rate
               </Text>
               <Text fw={700} size="xl" mt="xs" c="blue">
-                {withdrawals.length > 0 ? Math.round((withdrawals.filter(w => w.status === 'completed').length / withdrawals.length) * 100) : 0}%
+                {successRate}%
               </Text>
             </Card>
           </Grid.Col>
@@ -150,21 +167,23 @@ const WithdrawalsPage = observer(() => {
               </Table.Tr>
             </Table.Thead>
             <Table.Tbody>
-              {withdrawals.map((withdrawal) => (
+              {withdrawals.length > 0 ? withdrawals.map((withdrawal: Withdrawal) => (
                 <Table.Tr key={withdrawal.id}>
                   <Table.Td>
                     <Text fw={500}>{withdrawal.withdrawalId}</Text>
                   </Table.Td>
                   <Table.Td>
-                    <Text size="sm">{withdrawal.applicationId}</Text>
+                    <Text size="sm">Application #{withdrawal.applicationId}</Text>
                   </Table.Td>
                   <Table.Td>
-                    <Text fw={600}>${withdrawal.amount.toLocaleString()}</Text>
+                    <Text fw={600}>${Number(withdrawal.amount).toLocaleString()}</Text>
                   </Table.Td>
                   <Table.Td>
                     <Text size="sm">
                       {withdrawal.bankName}<br />
-                      <Text c="dimmed" size="xs">{withdrawal.accountNumber}</Text>
+                      <Text c="dimmed" size="xs">
+                        ****{withdrawal.accountNumber.slice(-4)}
+                      </Text>
                     </Text>
                   </Table.Td>
                   <Table.Td>
@@ -174,7 +193,10 @@ const WithdrawalsPage = observer(() => {
                   </Table.Td>
                   <Table.Td>
                     <Text size="sm">
-                      {withdrawal.processedAt ? withdrawal.processedAt.toLocaleDateString() : withdrawal.createdAt.toLocaleDateString()}
+                      {withdrawal.processedAt 
+                        ? formatDate(withdrawal.processedAt) 
+                        : formatDate(withdrawal.createdAt)
+                      }
                     </Text>
                   </Table.Td>
                   <Table.Td>
@@ -190,7 +212,15 @@ const WithdrawalsPage = observer(() => {
                     </Group>
                   </Table.Td>
                 </Table.Tr>
-              ))}
+              )) : (
+                <Table.Tr>
+                  <Table.Td colSpan={7}>
+                    <Text c="dimmed" ta="center" py="xl">
+                      No withdrawal requests yet. Create your first withdrawal request to get started.
+                    </Text>
+                  </Table.Td>
+                </Table.Tr>
+              )}
             </Table.Tbody>
           </Table>
         </Card>

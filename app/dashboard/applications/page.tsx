@@ -1,11 +1,11 @@
 'use client';
 
 import { observer } from 'mobx-react-lite';
+import { useQuery } from '@tanstack/react-query';
 import { Container, Title, Card, Group, Button, Badge, Text, Grid, ActionIcon, Menu } from '@mantine/core';
 import { IconPlus, IconEye, IconEdit, IconTrash, IconDots } from '@tabler/icons-react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { authStore } from '@/lib/stores/auth.store';
-import { applicationStore } from '@/lib/stores/application.store';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 
@@ -18,44 +18,20 @@ const ApplicationsPage = observer(() => {
     }
   }, [authStore.isAuthenticated, router]);
 
+  // CHANGED: Fetch real application data from API
+  const { data: applications = [] } = useQuery({
+    queryKey: ['user-applications', authStore.user?.id],
+    queryFn: async () => {
+      const response = await fetch(`/api/applications?userId=${authStore.user?.id}`);
+      if (!response.ok) throw new Error('Failed to fetch applications');
+      return response.json();
+    },
+    enabled: !!authStore.user?.id,
+  });
   if (!authStore.isAuthenticated) {
     return null;
   }
 
-  // Mock data - in real app, this would come from API
-  const applications = [
-    {
-      id: '1',
-      applicationId: 'APP-2024-001',
-      businessName: 'Tech Innovations LLC',
-      businessType: 'Technology',
-      requestedAmount: 50000,
-      approvedAmount: 45000,
-      status: 'approved',
-      createdAt: new Date('2024-01-15'),
-      purpose: 'Equipment purchase and expansion',
-    },
-    {
-      id: '2',
-      applicationId: 'APP-2024-002',
-      businessName: 'Green Energy Solutions',
-      businessType: 'Energy',
-      requestedAmount: 75000,
-      status: 'pending',
-      createdAt: new Date('2024-01-20'),
-      purpose: 'Research and development',
-    },
-    {
-      id: '3',
-      applicationId: 'APP-2024-003',
-      businessName: 'Local Restaurant Chain',
-      businessType: 'Food Service',
-      requestedAmount: 30000,
-      status: 'rejected',
-      createdAt: new Date('2024-01-25'),
-      purpose: 'Kitchen equipment upgrade',
-    },
-  ];
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -94,7 +70,7 @@ const ApplicationsPage = observer(() => {
         </Group>
 
         <Grid>
-          {applications.map((app) => (
+          {applications.length > 0 ? applications.map((app: any) => (
             <Grid.Col key={app.id} span={{ base: 12, md: 6, lg: 4 }}>
               <Card withBorder radius="md" shadow="sm" p="lg" h="100%">
                 <Group justify="space-between" mb="md">
@@ -134,11 +110,11 @@ const ApplicationsPage = observer(() => {
                 </Text>
 
                 <Text size="sm" mb="xs">
-                  <strong>Requested:</strong> ${app.requestedAmount.toLocaleString()}
+                  <strong>Requested:</strong> ${Number(app.requestedAmount).toLocaleString()}
                 </Text>
                 {app.approvedAmount && (
                   <Text size="sm" mb="xs" c="green">
-                    <strong>Approved:</strong> ${app.approvedAmount.toLocaleString()}
+                    <strong>Approved:</strong> ${Number(app.approvedAmount).toLocaleString()}
                   </Text>
                 )}
 
@@ -159,7 +135,23 @@ const ApplicationsPage = observer(() => {
                 </Button>
               </Card>
             </Grid.Col>
-          ))}
+          )) : (
+            <Grid.Col span={12}>
+              <Card withBorder radius="md" shadow="sm" p="xl">
+                <Text c="dimmed" ta="center">
+                  No applications yet. Create your first application to get started.
+                </Text>
+                <Group justify="center" mt="md">
+                  <Button
+                    onClick={() => router.push('/dashboard/apply')}
+                    style={{ backgroundColor: '#005ea2' }}
+                  >
+                    Create Application
+                  </Button>
+                </Group>
+              </Card>
+            </Grid.Col>
+          )}
         </Grid>
       </Container>
     </DashboardLayout>
