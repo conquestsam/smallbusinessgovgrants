@@ -140,8 +140,8 @@ const LoginPage = observer(() => {
           </Group>
 
           {/* Demo Credentials */}
-          <Card mt="xl" bg="gray.0" p="md">
-            <Text size="sm" fw={500} mb="xs" c="#002e6d">
+          {/* <Card mt="xl" bg="gray.0" p="md"> */}
+            {/* <Text size="sm" fw={500} mb="xs" c="#002e6d">
               Demo Credentials:
             </Text>
             <Text size="xs" c="dimmed">
@@ -149,8 +149,8 @@ const LoginPage = observer(() => {
             </Text>
             <Text size="xs" c="dimmed">
               <strong>User:</strong> user@example.com / password123
-            </Text>
-          </Card>
+            </Text> */}
+          {/* </Card> */}
         </Card>
       </Container>
     </div>

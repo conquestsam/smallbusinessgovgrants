@@ -3,6 +3,7 @@ import { db } from '@/lib/db/connection';
 import { grantApplications } from '@/lib/db/schema';
 import { TelegramService } from '@/lib/services/telegram.service';
 import { EmailService } from '@/lib/services/email.service';
+import { eq } from 'drizzle-orm';
 
 export async function POST(request: NextRequest) {
   try {
@@ -46,9 +47,22 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
+    const { searchParams } = new URL(request.url);
+    const userId = searchParams.get('userId');
+
+    // Check if userId is provided
+    if (!userId) {
+      return NextResponse.json(
+        { message: 'User ID is required' },
+        { status: 400 }
+      );
+    }
+
+    // Only fetch applications for the specific user
     const applications = await db
       .select()
       .from(grantApplications)
+      .where(eq(grantApplications.userId, userId))
       .orderBy(grantApplications.createdAt);
 
     return NextResponse.json(applications);

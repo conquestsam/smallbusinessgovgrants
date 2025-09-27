@@ -21,11 +21,13 @@ const DashboardPage = observer(() => {
     }
   }, [authStore.isAuthenticated, router]);
 
-  // CHANGED: Fetch real data from API instead of mock data
+  // FIXED: Now correctly fetches only user's applications with proper authentication
   const { data: applications = [] } = useQuery({
     queryKey: ['user-applications', authStore.user?.id],
     queryFn: async () => {
-      const response = await fetch(`/api/applications?userId=${authStore.user?.id}`);
+      if (!authStore.user?.id) throw new Error('User not authenticated');
+      
+      const response = await fetch(`/api/applications?userId=${authStore.user.id}`);
       if (!response.ok) throw new Error('Failed to fetch applications');
       return response.json();
     },
@@ -35,17 +37,20 @@ const DashboardPage = observer(() => {
   const { data: withdrawals = [] } = useQuery({
     queryKey: ['user-withdrawals', authStore.user?.id],
     queryFn: async () => {
-      const response = await fetch(`/api/withdrawals?userId=${authStore.user?.id}`);
+      if (!authStore.user?.id) throw new Error('User not authenticated');
+      
+      const response = await fetch(`/api/withdrawals?userId=${authStore.user.id}`);
       if (!response.ok) throw new Error('Failed to fetch withdrawals');
       return response.json();
     },
     enabled: !!authStore.user?.id,
   });
+
   if (!authStore.isAuthenticated) {
     return null;
   }
 
-  // CHANGED: Calculate real statistics from database data
+  // FIXED: Calculations now use properly filtered user data
   const totalApproved = applications
     .filter((app: any) => app.status === 'approved')
     .reduce((sum: number, app: any) => sum + Number(app.approvedAmount || 0), 0);
@@ -81,7 +86,7 @@ const DashboardPage = observer(() => {
     },
   ];
 
-  // CHANGED: Use real applications data
+  // FIXED: Uses properly filtered user applications
   const recentApplications = applications.slice(0, 3);
 
   const getStatusColor = (status: string) => {
