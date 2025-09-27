@@ -26,6 +26,11 @@ interface MenuItem {
   badge?: string;
 }
 
+// Add interface for Sidebar props
+interface SidebarProps {
+  onItemClick?: () => void;
+}
+
 const userMenuItems: MenuItem[] = [
   { label: 'Dashboard', icon: IconDashboard, href: '/dashboard' },
   { label: 'Application Status', icon: IconFileText, href: '/dashboard/applications' },
@@ -46,7 +51,7 @@ const adminMenuItems: MenuItem[] = [
 ];
 
 // CHANGED: Add real-time badge counts using React Query
-export const Sidebar = observer(() => {
+export const Sidebar = observer(({ onItemClick }: SidebarProps) => {
   const router = useRouter();
   const pathname = usePathname();
   
@@ -83,6 +88,14 @@ export const Sidebar = observer(() => {
       })) 
     : userMenuItems;
 
+  const handleItemClick = (href: string) => {
+    router.push(href);
+    // Call the onItemClick callback if provided (for mobile menu closing)
+    if (onItemClick) {
+      onItemClick();
+    }
+  };
+
   return (
     <Stack gap="md" mt="lg">
       <Text size="xs" c="dimmed" fw={500} tt="uppercase" mb="md">
@@ -105,7 +118,7 @@ export const Sidebar = observer(() => {
           active={pathname === item.href}
           onClick={(event) => {
             event.preventDefault();
-            router.push(item.href);
+            handleItemClick(item.href);
           }}
           styles={{
             root: {
