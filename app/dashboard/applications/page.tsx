@@ -9,6 +9,20 @@ import { authStore } from '@/lib/stores/auth.store';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 
+// Add interface for application data
+interface Application {
+  id: string;
+  applicationId: string;
+  businessName: string;
+  businessType: string;
+  requestedAmount: string;
+  approvedAmount?: string;
+  purpose: string;
+  status: 'pending' | 'approved' | 'rejected' | 'processing';
+  createdAt: string;
+  updatedAt: string;
+}
+
 const ApplicationsPage = observer(() => {
   const router = useRouter();
 
@@ -18,8 +32,8 @@ const ApplicationsPage = observer(() => {
     }
   }, [authStore.isAuthenticated, router]);
 
-  // CHANGED: Fetch real application data from API
-  const { data: applications = [] } = useQuery({
+  // CHANGED: Add proper typing to useQuery hook
+  const { data: applications = [] } = useQuery<Application[]>({
     queryKey: ['user-applications', authStore.user?.id],
     queryFn: async () => {
       const response = await fetch(`/api/applications?userId=${authStore.user?.id}`);
@@ -28,10 +42,10 @@ const ApplicationsPage = observer(() => {
     },
     enabled: !!authStore.user?.id,
   });
+
   if (!authStore.isAuthenticated) {
     return null;
   }
-
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -45,6 +59,16 @@ const ApplicationsPage = observer(() => {
         return 'blue';
       default:
         return 'gray';
+    }
+  };
+
+  // FIXED: Safe date formatting function
+  const formatDate = (dateString: string) => {
+    try {
+      return new Date(dateString).toLocaleDateString();
+    } catch (error) {
+      console.error('Error formatting date:', error);
+      return 'Invalid date';
     }
   };
 
@@ -70,7 +94,7 @@ const ApplicationsPage = observer(() => {
         </Group>
 
         <Grid>
-          {applications.length > 0 ? applications.map((app: any) => (
+          {applications.length > 0 ? applications.map((app: Application) => (
             <Grid.Col key={app.id} span={{ base: 12, md: 6, lg: 4 }}>
               <Card withBorder radius="md" shadow="sm" p="lg" h="100%">
                 <Group justify="space-between" mb="md">
@@ -84,7 +108,10 @@ const ApplicationsPage = observer(() => {
                       </ActionIcon>
                     </Menu.Target>
                     <Menu.Dropdown>
-                      <Menu.Item leftSection={<IconEye size={14} />}>
+                      <Menu.Item 
+                        leftSection={<IconEye size={14} />}
+                        onClick={() => router.push(`/dashboard/applications/${app.id}`)}
+                      >
                         View Details
                       </Menu.Item>
                       {app.status === 'pending' && (
@@ -118,8 +145,9 @@ const ApplicationsPage = observer(() => {
                   </Text>
                 )}
 
+                {/* FIXED: Use the safe date formatting function */}
                 <Text size="xs" c="dimmed" mb="md">
-                  Applied: {app.createdAt.toLocaleDateString()}
+                  Applied: {formatDate(app.createdAt)}
                 </Text>
 
                 <Text size="sm" mb="md" lineClamp={2}>
@@ -138,13 +166,17 @@ const ApplicationsPage = observer(() => {
           )) : (
             <Grid.Col span={12}>
               <Card withBorder radius="md" shadow="sm" p="xl">
-                <Text c="dimmed" ta="center">
-                  No applications yet. Create your first application to get started.
+                <Text c="dimmed" ta="center" size="lg" mb="sm">
+                  No applications yet.
+                </Text>
+                <Text c="dimmed" ta="center" size="sm" mb="md">
+                  Create your first application to get started.
                 </Text>
                 <Group justify="center" mt="md">
                   <Button
                     onClick={() => router.push('/dashboard/apply')}
                     style={{ backgroundColor: '#005ea2' }}
+                    leftSection={<IconPlus size={16} />}
                   >
                     Create Application
                   </Button>

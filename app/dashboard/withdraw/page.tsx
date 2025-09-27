@@ -1,7 +1,7 @@
 'use client';
 
 import { observer } from 'mobx-react-lite';
-import { Container, Title, Card, Button, Group, Text, Select, NumberInput, TextInput, Alert, Grid } from '@mantine/core';
+import { Container, Title, Card, Button, Group, Text, Select, NumberInput, TextInput, Alert, Grid, Loader } from '@mantine/core';
 import { useForm } from '@mantine/form';
 import { notifications } from '@mantine/notifications';
 import { useState } from 'react';
@@ -10,6 +10,26 @@ import { authStore } from '@/lib/stores/auth.store';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { IconAlertCircle, IconCreditCard } from '@tabler/icons-react';
+import { useQuery } from '@tanstack/react-query';
+
+interface Application {
+  id: string;
+  applicationId: string;
+  businessName: string;
+  status: string;
+  approvedAmount: number;
+  totalWithdrawn: number;
+}
+
+interface WithdrawalFormValues {
+  applicationId: string;
+  amount: string;
+  bankName: string;
+  accountNumber: string;
+  routingNumber: string;
+  accountHolderName: string;
+  confirmAccountNumber: string;
+}
 
 const WithdrawPage = observer(() => {
   const router = useRouter();
@@ -21,64 +41,76 @@ const WithdrawPage = observer(() => {
     }
   }, [authStore.isAuthenticated, router]);
 
-  // Mock approved applications
-  const approvedApplications = [
-    {
-      value: 'APP-2024-001',
-      label: 'Tech Innovations LLC - $45,000 available',
-      availableAmount: 45000,
-      withdrawnAmount: 25000,
+  // CHANGED: Fetch approved applications from database
+  const { data: approvedApplications = [], isLoading, error } = useQuery<Application[]>({
+    queryKey: ['approved-applications', authStore.user?.id],
+    queryFn: async () => {
+      const response = await fetch(`/api/applications?userId=${authStore.user?.id}&status=approved`);
+      if (!response.ok) throw new Error('Failed to fetch applications');
+      const applications = await response.json();
+      
+      // Filter only approved applications and calculate available amounts
+      return applications.filter((app: Application) => app.status === 'approved').map((app: Application) => ({
+        ...app,
+        // Calculate total withdrawn amount (you might need to fetch this from withdrawals API)
+        totalWithdrawn: 0, // This should be calculated from withdrawals data
+      }));
     },
-  ];
+    enabled: !!authStore.user?.id && authStore.isAuthenticated,
+  });
 
-  interface WithdrawalFormValues {
-  applicationId: string;
-  amount: string;
-  bankName: string;
-  accountNumber: string;
-  routingNumber: string;
-  accountHolderName: string;
-  confirmAccountNumber: string;
-}
-
-const form = useForm<WithdrawalFormValues>({
-  initialValues: {
-    applicationId: '',
-    amount: '',
-    bankName: '',
-    accountNumber: '',
-    routingNumber: '',
-    accountHolderName: '',
-    confirmAccountNumber: '',
-  },
-  validate: {
-    applicationId: (value) => (!value ? 'Please select an application' : null),
-    amount: (value) => {
-      if (!value) return 'Amount is required';
-      const numValue = Number(value);
-      if (numValue <= 0) return 'Amount must be greater than 0';
-      if (numValue > 20000) return 'Maximum withdrawal amount is $20,000';
-      return null;
+  const form = useForm<WithdrawalFormValues>({
+    initialValues: {
+      applicationId: '',
+      amount: '',
+      bankName: '',
+      accountNumber: '',
+      routingNumber: '',
+      accountHolderName: '',
+      confirmAccountNumber: '',
     },
-    bankName: (value) => (!value ? 'Bank name is required' : null),
-    accountNumber: (value) => (!value ? 'Account number is required' : null),
-    routingNumber: (value) => {
-      if (!value) return 'Routing number is required';
-      if (!/^\d{9}$/.test(value)) return 'Routing number must be 9 digits';
-      return null;
+    validate: {
+      applicationId: (value) => (!value ? 'Please select an application' : null),
+      amount: (value) => {
+        if (!value) return 'Amount is required';
+        const numValue = Number(value);
+        if (numValue <= 0) return 'Amount must be greater than 0';
+        if (numValue > 50000) return 'Maximum withdrawal amount is $50,000';
+        
+        // Validate against available amount
+        const selectedApp = approvedApplications.find(app => app.id === form.values.applicationId);
+        if (selectedApp && numValue > (selectedApp.approvedAmount - selectedApp.totalWithdrawn)) {
+          return `Amount exceeds available balance of $${(selectedApp.approvedAmount - selectedApp.totalWithdrawn).toLocaleString()}`;
+        }
+        
+        return null;
+      },
+      bankName: (value) => (!value ? 'Bank name is required' : null),
+      accountNumber: (value) => (!value ? 'Account number is required' : null),
+      routingNumber: (value) => {
+        if (!value) return 'Routing number is required';
+        if (!/^\d{9}$/.test(value)) return 'Routing number must be 9 digits';
+        return null;
+      },
+      accountHolderName: (value) => (!value ? 'Account holder name is required' : null),
+      confirmAccountNumber: (value, values) =>
+        value !== values.accountNumber ? 'Account numbers do not match' : null,
     },
-    accountHolderName: (value) => (!value ? 'Account holder name is required' : null),
-    confirmAccountNumber: (value, values) =>
-      value !== values.accountNumber ? 'Account numbers do not match' : null,
-  },
-});
+  });
 
   if (!authStore.isAuthenticated) {
     return null;
   }
 
-  const selectedApp = approvedApplications.find(app => app.value === form.values.applicationId);
-  const availableAmount = selectedApp ? selectedApp.availableAmount - selectedApp.withdrawnAmount : 0;
+  // CHANGED: Format applications for Select component
+  const applicationOptions = approvedApplications.map(app => ({
+    value: app.id,
+    label: `${app.businessName} - $${(app.approvedAmount - app.totalWithdrawn).toLocaleString()} available`,
+    availableAmount: app.approvedAmount - app.totalWithdrawn,
+  }));
+
+  const selectedApp = approvedApplications.find(app => app.id === form.values.applicationId);
+  const availableAmount = selectedApp ? selectedApp.approvedAmount - selectedApp.totalWithdrawn : 0;
 
   const handleSubmit = async (values: typeof form.values) => {
     setIsSubmitting(true);
@@ -109,18 +141,87 @@ const form = useForm<WithdrawalFormValues>({
         });
         router.push('/dashboard/withdrawals');
       } else {
-        throw new Error('Failed to submit withdrawal request');
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to submit withdrawal request');
       }
     } catch (error) {
       notifications.show({
         title: 'Submission Failed',
-        message: 'There was an error submitting your withdrawal request. Please try again.',
+        message: error instanceof Error ? error.message : 'There was an error submitting your withdrawal request. Please try again.',
         color: 'red',
       });
     } finally {
       setIsSubmitting(false);
     }
   };
+
+  // Show loading state
+  if (isLoading) {
+    return (
+      <DashboardLayout>
+        <Container size="md">
+          <Group justify="center" py="xl">
+            <Loader size="lg" />
+            <Text>Loading your approved applications...</Text>
+          </Group>
+        </Container>
+      </DashboardLayout>
+    );
+  }
+
+  // Show error state
+  if (error) {
+    return (
+      <DashboardLayout>
+        <Container size="md">
+          <Alert color="red" title="Error" variant="filled">
+            <Text>Failed to load applications: {error.message}</Text>
+            <Button mt="md" onClick={() => window.location.reload()}>
+              Retry
+            </Button>
+          </Alert>
+        </Container>
+      </DashboardLayout>
+    );
+  }
+
+  // Show message if no approved applications
+  if (!isLoading && approvedApplications.length === 0) {
+    return (
+      <DashboardLayout>
+        <Container size="md">
+          <Title order={1} c="#002e6d" mb="xl" ta="center">
+            Request Withdrawal
+          </Title>
+
+          <Card withBorder radius="md" shadow="sm" p="xl">
+            <Alert icon={<IconAlertCircle size="1rem" />} color="yellow" variant="filled">
+              <Text fw={600} mb="xs">No Approved Applications</Text>
+              <Text size="sm">
+                You need to have an approved grant application before you can request a withdrawal.
+                Please check your application status or submit a new application.
+              </Text>
+            </Alert>
+            
+            <Group justify="center" mt="xl">
+              <Button
+                variant="default"
+                onClick={() => router.push('/dashboard/applications')}
+              >
+                View Applications
+              </Button>
+              <Button
+                onClick={() => router.push('/dashboard/apply')}
+                style={{ backgroundColor: '#005ea2' }}
+              >
+                Create New Application
+              </Button>
+            </Group>
+          </Card>
+        </Container>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout>
@@ -147,7 +248,7 @@ const form = useForm<WithdrawalFormValues>({
                   required
                   label="Select Approved Application"
                   placeholder="Choose an application to withdraw from"
-                  data={approvedApplications}
+                  data={applicationOptions}
                   {...form.getInputProps('applicationId')}
                 />
                 {selectedApp && (
@@ -235,6 +336,7 @@ const form = useForm<WithdrawalFormValues>({
                     loading={isSubmitting}
                     leftSection={<IconCreditCard size={16} />}
                     style={{ backgroundColor: '#005ea2' }}
+                    disabled={!selectedApp || availableAmount <= 0}
                   >
                     Submit Withdrawal Request
                   </Button>
