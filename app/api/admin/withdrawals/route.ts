@@ -101,8 +101,26 @@ export async function PUT(request: NextRequest) {
     if (userResult.length > 0) {
       const user = userResult[0];
       
+      // NEW: Send withdrawal status email notification
+      try {
+        await EmailService.sendWithdrawalStatusEmail({
+          name: `${user.firstName} ${user.lastName}`,
+          email: user.email,
+          withdrawalId: withdrawalId,
+          amount: Number(updatedWithdrawal[0].amount),
+          status: status as 'pending' | 'approved' | 'rejected' | 'processed',
+          paymentMethod: 'Bank Transfer', // Assuming bank transfer for all withdrawals
+          processedAt: updatedWithdrawal[0].processedAt?.toISOString() || new Date().toISOString(),
+          notes: adminNotes
+        });
+        console.log('Withdrawal status email sent successfully to:', user.email);
+      } catch (emailError) {
+        console.error('Failed to send withdrawal status email:', emailError);
+        // Don't throw error, continue with the response
+      }
+      
+      // Send success email (legacy - can be removed if using new status emails)
       if (status === 'completed') {
-        // Send success email
         await EmailService.sendWithdrawalSuccess(
           user.email,
           withdrawalId,

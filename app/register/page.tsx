@@ -13,10 +13,13 @@ import {
   Group,
   Grid,
   Alert,
+  FileInput,
+  Avatar,
+  Center,
 } from '@mantine/core';
 import { useForm } from '@mantine/form';
 import { notifications } from '@mantine/notifications';
-import { IconAlertCircle, IconUserPlus } from '@tabler/icons-react';
+import { IconAlertCircle, IconUserPlus, IconUpload } from '@tabler/icons-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
@@ -24,47 +27,67 @@ import { useRouter } from 'next/navigation';
 export default function RegisterPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const router = useRouter();
 
- interface RegisterFormValues {
-  firstName: string;
-  lastName: string;
-  email: string;
-  phone: string;
-  password: string;
-  confirmPassword: string;
-}
+  const form = useForm({
+    initialValues: {
+      firstName: '',
+      lastName: '',
+      email: '',
+      phone: '',
+      password: '',
+      confirmPassword: '',
+      avatar: null,
+    },
+    validate: {
+      firstName: (value) => (value.length < 2 ? 'First name must be at least 2 characters' : null), // Fixed: changed from 6 to 2
+      lastName: (value) => (value.length < 2 ? 'Last name must be at least 2 characters' : null),
+      email: (value) => (/^\S+@\S+$/.test(value) ? null : 'Invalid email'),
+      password: (value) => (value.length < 6 ? 'Password must be at least 6 characters' : null),
+      confirmPassword: (value, values) =>
+        value !== values.password ? 'Passwords did not match' : null,
+    },
+  });
 
-const form = useForm<RegisterFormValues>({
-  initialValues: {
-    firstName: '',
-    lastName: '',
-    email: '',
-    phone: '',
-    password: '',
-    confirmPassword: '',
-  },
-  validate: {
-    firstName: (value) => (value.length < 2 ? 'First name must be at least 2 characters' : null),
-    lastName: (value) => (value.length < 2 ? 'Last name must be at least 2 characters' : null),
-    email: (value) => (/^\S+@\S+$/.test(value) ? null : 'Invalid email'),
-    password: (value) => (value.length < 6 ? 'Password must be at least 6 characters' : null),
-    confirmPassword: (value, values) =>
-      value !== values.password ? 'Passwords did not match' : null,
-  },
-});
+  // Handle avatar file selection and preview
+  const handleAvatarChange = (file: File | null) => {
+    setAvatarFile(file);
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setAvatarPreview(e.target?.result as string);
+      };
+      reader.readAsDataURL(file);
+    } else {
+      setAvatarPreview(null);
+    }
+  };
 
   const handleRegister = async (values: typeof form.values) => {
     setIsLoading(true);
     setError('');
 
     try {
+      // FIXED: Include confirmPassword in FormData
+      const formData = new FormData();
+      
+      // Append each field individually with proper typing
+      formData.append('firstName', values.firstName);
+      formData.append('lastName', values.lastName);
+      formData.append('email', values.email);
+      formData.append('phone', values.phone);
+      formData.append('password', values.password);
+      formData.append('confirmPassword', values.confirmPassword); // ADDED THIS LINE
+      
+      if (avatarFile) {
+        formData.append('avatar', avatarFile);
+      }
+
       const response = await fetch('/api/auth/register', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(values),
+        body: formData,
       });
 
       const data = await response.json();
@@ -77,7 +100,7 @@ const form = useForm<RegisterFormValues>({
         });
         router.push('/login');
       } else {
-        setError(data.message || 'Registration failed');
+        setError(data.error || data.message || 'Registration failed');
       }
     } catch (error) {
       setError('An unexpected error occurred');
@@ -112,12 +135,35 @@ const form = useForm<RegisterFormValues>({
           )}
 
           <form onSubmit={form.onSubmit(handleRegister)}>
+            <Center mb="xl">
+              <div style={{ textAlign: 'center' }}>
+                <Avatar
+                  src={avatarPreview}
+                  size="xl"
+                  radius="xl"
+                  color="blue"
+                  mb="md"
+                >
+                  {form.values.firstName?.[0]}{form.values.lastName?.[0]}
+                </Avatar>
+                <FileInput
+                  placeholder="Upload profile picture"
+                  leftSection={<IconUpload size={16} />}
+                  accept="image/*"
+                  value={avatarFile}
+                  onChange={handleAvatarChange}
+                  size="sm"
+                  w={200}
+                />
+              </div>
+            </Center>
+
             <Grid>
               <Grid.Col span={6}>
                 <TextInput
                   required
                   label="First Name"
-                  placeholder="John"
+                  placeholder="Moore"
                   size="md"
                   {...form.getInputProps('firstName')}
                 />
@@ -126,7 +172,7 @@ const form = useForm<RegisterFormValues>({
                 <TextInput
                   required
                   label="Last Name"
-                  placeholder="Doe"
+                  placeholder="Hahn"
                   size="md"
                   {...form.getInputProps('lastName')}
                 />

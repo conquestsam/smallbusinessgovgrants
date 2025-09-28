@@ -85,12 +85,28 @@ const ApplyPage = observer(() => {
       // Generate application ID
       const applicationId = `APP-${new Date().getFullYear()}-${String(Date.now()).slice(-6)}`;
       
+      // 🛠️ FIX: Get the user's email from authStore
+      const userEmail = authStore.user?.email;
+      
+      if (!userEmail) {
+        throw new Error('User email not found. Please ensure you are logged in.');
+      }
+
       const applicationData = {
         ...form.values,
         applicationId,
         userId: authStore.user?.id,
+        // 🛠️ FIX: Add user email to the submission data - THIS WAS MISSING
+        userEmail: userEmail, // This is crucial for email notifications
         status: 'pending',
       };
+
+      console.log('Submitting application with data:', {
+        applicationId,
+        userId: authStore.user?.id,
+        userEmail: userEmail,
+        businessName: form.values.businessName
+      });
 
       const response = await fetch('/api/applications', {
         method: 'POST',
@@ -103,17 +119,19 @@ const ApplyPage = observer(() => {
       if (response.ok) {
         notifications.show({
           title: 'Application Submitted',
-          message: `Your application ${applicationId} has been submitted successfully!`,
+          message: `Your application ${applicationId} has been submitted successfully! Check your email for confirmation.`,
           color: 'green',
         });
         router.push('/dashboard/applications');
       } else {
-        throw new Error('Failed to submit application');
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to submit application');
       }
     } catch (error) {
+      console.error('Application submission error:', error);
       notifications.show({
         title: 'Submission Failed',
-        message: 'There was an error submitting your application. Please try again.',
+        message: error instanceof Error ? error.message : 'There was an error submitting your application. Please try again.',
         color: 'red',
       });
     } finally {

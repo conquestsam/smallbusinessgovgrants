@@ -12,11 +12,40 @@ export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
   try {
-    // Read the body only once
-    const body = await request.json();
+    // Check if the request is FormData
+    const contentType = request.headers.get('content-type') || '';
     
-    // Extract all fields from the single body object
-    const { firstName, lastName, email, phone, password, confirmPassword } = body;
+    let formData;
+    let firstName, lastName, email, phone, password, confirmPassword;
+
+    if (contentType.includes('multipart/form-data')) {
+      // Handle FormData from the frontend
+      formData = await request.formData();
+      
+      firstName = formData.get('firstName') as string;
+      lastName = formData.get('lastName') as string;
+      email = formData.get('email') as string;
+      phone = formData.get('phone') as string;
+      password = formData.get('password') as string;
+      confirmPassword = formData.get('confirmPassword') as string;
+      
+      // Handle avatar file if present
+      const avatarFile = formData.get('avatar') as File | null;
+      if (avatarFile && avatarFile.size > 0) {
+        // Here you can process the avatar file
+        // For now, we'll just log it since your schema doesn't have an avatar field
+        console.log('Avatar file received:', avatarFile.name, avatarFile.size);
+      }
+    } else {
+      // Handle JSON data (fallback)
+      const body = await request.json();
+      firstName = body.firstName;
+      lastName = body.lastName;
+      email = body.email;
+      phone = body.phone;
+      password = body.password;
+      confirmPassword = body.confirmPassword;
+    }
 
     // Validate required fields for registration
     if (!firstName || !lastName || !email || !password) {
@@ -96,13 +125,19 @@ export async function POST(request: NextRequest) {
     
     // Send failure email if there was an error during registration
     try {
-      const body = JSON.parse(await request.text()); // Try to get the original data for error email
-      await EmailService.sendRegistrationEmail({
-        name: `${body.firstName} ${body.lastName}`,
-        email: body.email,
-        isSuccess: false,
-        errorMessage: error instanceof Error ? error.message : 'Registration failed'
-      });
+      // For FormData requests, we can't easily re-read the body
+      // So we'll skip the error email for FormData or use a different approach
+      const contentType = request.headers.get('content-type') || '';
+      
+      if (!contentType.includes('multipart/form-data')) {
+        const body = await request.json();
+        await EmailService.sendRegistrationEmail({
+          name: `${body.firstName} ${body.lastName}`,
+          email: body.email,
+          isSuccess: false,
+          errorMessage: error instanceof Error ? error.message : 'Registration failed'
+        });
+      }
     } catch (emailError) {
       console.error('Failed to send error email:', emailError);
     }
@@ -124,7 +159,7 @@ export async function OPTIONS() {
     headers: {
       'Access-Control-Allow-Origin': '*',
       'Access-Control-Allow-Methods': 'POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
     },
   });
 }

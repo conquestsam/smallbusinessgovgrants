@@ -69,6 +69,17 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ message: 'Forbidden' }, { status: 403 });
     }
 
+    // Get current application data for email
+    const currentApplication = await db
+      .select()
+      .from(grantApplications)
+      .where(eq(grantApplications.applicationId, applicationId))
+      .limit(1);
+
+    if (currentApplication.length === 0) {
+      return NextResponse.json({ message: 'Application not found' }, { status: 404 });
+    }
+
     // Update application
     const updatedApplication = await db
       .update(grantApplications)
@@ -87,20 +98,47 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ message: 'Application not found' }, { status: 404 });
     }
 
-    // Send notification email if approved
-    if (status === 'approved') {
-      const userResult = await db
-        .select()
-        .from(users)
-        .where(eq(users.id, updatedApplication[0].userId!))
-        .limit(1);
+    // Send notification email based on status
+    const userResult = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, updatedApplication[0].userId!))
+      .limit(1);
 
-      if (userResult.length > 0) {
-        await EmailService.sendApplicationApproval(
-          userResult[0].email,
-          applicationId,
-          Number(approvedAmount || 0)
-        );
+    if (userResult.length > 0) {
+      const user = userResult[0];
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://your-app-url.com';
+
+      if (status === 'approved') {
+        // Send approval email
+        const emailData = {
+          name: `${user.firstName} ${user.lastName}`,
+          email: user.email,
+          applicationId: applicationId,
+          requestedAmount: Number(currentApplication[0].requestedAmount),
+          approvedAmount: Number(approvedAmount),
+          GrantPurpose: currentApplication[0].purpose || 'Business Grant',
+          repaymentTerm: 0, // Add appropriate value if available
+          approvalDate: new Date().toLocaleDateString(),
+          availableForWithdrawal: Number(approvedAmount),
+          appUrl: appUrl
+        };
+
+        await EmailService.sendApplicationApproval(user.email, emailData, appUrl);
+      } else {
+        // Send status update email for other status changes
+        const emailData = {
+          name: `${user.firstName} ${user.lastName}`,
+          email: user.email,
+          applicationNumber: applicationId,
+          status: status as 'submitted' | 'under_review' | 'approved' | 'rejected',
+          requestedAmount: Number(currentApplication[0].requestedAmount),
+          approvedAmount: approvedAmount ? Number(approvedAmount) : undefined,
+          submissionDate: currentApplication[0].createdAt?.toISOString() || new Date().toISOString(),
+          appUrl: appUrl
+        };
+
+        await EmailService.sendApplicationStatusEmail(emailData);
       }
     }
 

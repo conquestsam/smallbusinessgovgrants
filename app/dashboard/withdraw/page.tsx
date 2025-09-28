@@ -41,7 +41,7 @@ const WithdrawPage = observer(() => {
     }
   }, [authStore.isAuthenticated, router]);
 
-  // CHANGED: Fetch approved applications from database
+  // Fetch approved applications from database
   const { data: approvedApplications = [], isLoading, error } = useQuery<Application[]>({
     queryKey: ['approved-applications', authStore.user?.id],
     queryFn: async () => {
@@ -59,7 +59,7 @@ const WithdrawPage = observer(() => {
     enabled: !!authStore.user?.id && authStore.isAuthenticated,
   });
 
-  // FIXED: Use useMemo to avoid circular references in form validation
+  // Use useMemo to avoid circular references in form validation
   const form = useForm<WithdrawalFormValues>({
     initialValues: {
       applicationId: '',
@@ -71,7 +71,7 @@ const WithdrawPage = observer(() => {
       confirmAccountNumber: '',
     },
     
-    // FIXED: Move validation functions outside to avoid circular references
+    // Move validation functions outside to avoid circular references
     validate: (values) => {
       const errors: Record<string, string | null> = {};
       
@@ -133,7 +133,7 @@ const WithdrawPage = observer(() => {
     return null;
   }
 
-  // FIXED: Use useMemo to optimize application options
+  // Use useMemo to optimize application options
   const applicationOptions = useMemo(() => 
     approvedApplications.map(app => ({
       value: app.id,
@@ -143,7 +143,7 @@ const WithdrawPage = observer(() => {
     [approvedApplications]
   );
 
-  // FIXED: Explicitly type selectedApp
+  // Explicitly type selectedApp
   const selectedApp: Application | undefined = useMemo(() => 
     approvedApplications.find(app => app.id === form.values.applicationId),
     [approvedApplications, form.values.applicationId]
@@ -175,7 +175,7 @@ const WithdrawPage = observer(() => {
       if (response.ok) {
         notifications.show({
           title: 'Withdrawal Request Submitted',
-          message: `Your withdrawal request ${withdrawalId} has been submitted for review.`,
+          message: `Your withdrawal request ${withdrawalId} has been submitted for review. You will receive an email confirmation shortly.`, // UPDATED: Added email notification mention
           color: 'green',
         });
         router.push('/dashboard/withdrawals');
@@ -276,7 +276,8 @@ const WithdrawPage = observer(() => {
               • Withdrawals are processed within 3-5 business days<br />
               • Maximum withdrawal amount per request: $50,000<br />
               • Bank account must be in the business name<br />
-              • All withdrawals are subject to verification
+              • All withdrawals are subject to verification<br />
+              • NEW: You will receive email notifications for all status updates
             </Text>
           </Alert>
 
