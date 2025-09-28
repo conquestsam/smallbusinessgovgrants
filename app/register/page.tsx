@@ -31,7 +31,17 @@ export default function RegisterPage() {
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const router = useRouter();
 
-  const form = useForm({
+  interface PasswordFormValues {
+    firstName:string;
+    lastName:string;
+    email:string;
+    phone:string;
+  password: string;
+  confirmPassword: string;
+  avatar:File|null; 
+}
+
+  const form = useForm<PasswordFormValues>({
     initialValues: {
       firstName: '',
       lastName: '',
@@ -42,10 +52,10 @@ export default function RegisterPage() {
       avatar: null,
     },
     validate: {
-      firstName: (value) => (value.length < 2 ? 'First name must be at least 2 characters' : null), // Fixed: changed from 6 to 2
-      lastName: (value) => (value.length < 2 ? 'Last name must be at least 2 characters' : null),
-      email: (value) => (/^\S+@\S+$/.test(value) ? null : 'Invalid email'),
-      password: (value) => (value.length < 6 ? 'Password must be at least 6 characters' : null),
+      firstName: (value:string) => (value.length < 2 ? 'First name must be at least 2 characters' : null), // Fixed: changed from 6 to 2
+      lastName: (value:string) => (value.length < 2 ? 'Last name must be at least 2 characters' : null),
+      email: (value:string) => (/^\S+@\S+$/.test(value) ? null : 'Invalid email'),
+      password: (value:string) => (value.length < 6 ? 'Password must be at least 6 characters' : null),
       confirmPassword: (value, values) =>
         value !== values.password ? 'Passwords did not match' : null,
     },
