@@ -1,144 +1,230 @@
-'use client';
+'use client'
 
-import VisitorNotification from '@/components/ui/visitorNotification';
-import { Container, Title, Text, Button, Group, Card, Grid, ThemeIcon } from '@mantine/core';
-import { IconShieldCheck, IconClock, IconUsers, IconTrendingUp } from '@tabler/icons-react';
-import Image from 'next/image';
-import Link from 'next/link';
+import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
+// import { supabase } from '@/lib/supabase'
+// import Header from '@/components/layout/header'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { FileText, Users, DollarSign, Shield, ArrowRight } from 'lucide-react'
+import VisitorNotification from '@/components/ui/visitorNotification'
+import { Navigation } from '@/components/ui/navigation'
+import { HeroSection } from '@/components/ui/hero-section'
+import { FAQSection } from '@/components/ui/faq-section'
+import { Footer } from '@/components/ui/footer'
 
-const features = [
-  {
-    icon: IconShieldCheck,
-    title: 'Secure & Trusted',
-    description: 'Bank-level security for all your grant applications and financial data.',
-  },
-  {
-    icon: IconClock,
-    title: 'Fast Processing',
-    description: 'Quick approval process with real-time status updates and notifications.',
-  },
-  {
-    icon: IconUsers,
-    title: 'Expert Support',
-    description: '24/7 support from SBA experts to guide you through the process.',
-  },
-  {
-    icon: IconTrendingUp,
-    title: 'Growth Focused',
-    description: 'Designed to help small businesses access funding for growth and expansion.',
-  },
-];
+export default function HomePage() {
+  const [user, setUser] = useState<any>(null)
+  const [profile, setProfile] = useState<any>(null)
+  const router = useRouter()
 
-export default function Home() {
+  // useEffect(() => {
+  //   const checkUser = async () => {
+  //     const { data: { user } } = await supabase.auth.getUser()
+  //     setUser(user)
+
+  //     if (user) {
+  //       const { data: profile } = await supabase
+  //         .from('profiles')
+  //         .select('*')
+  //         .eq('user_id', user.id)
+  //         .single()
+  //       setProfile(profile)
+
+  //       // Redirect based on role
+  //       if (profile?.role === 'admin') {
+  //         router.push('/admin')
+  //       } else {
+  //         router.push('/dashboard')
+  //       }
+  //     }
+  //   }
+
+  //   checkUser()
+  // }, [router])
+
+  // if (user) {
+  //   return <div>Redirecting...</div>
+  // }
+
   return (
-    <div style={{ minHeight: '100vh' }}>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
       <VisitorNotification/>
-      {/* Header */}
-      <div style={{ backgroundColor: '#002e6d', color: 'white', padding: '1rem 0' }}>
-        
-        <Container size="lg">
-          <Group justify="space-between">
-            <Image
-              src="https://www.sba.gov/themes/custom/sba/dist/img/logo-horizontal.svg"
-              alt="SBA Logo"
-              width={150}
-              height={50}
-              style={{ filter: 'brightness(0) invert(1)' }}
-            />
-            <Group>
-              <Button component={Link} href="/login" variant="outline" color="white">
-                Login
-              </Button>
-              <Button component={Link} href="/register" color="rgba(0, 94, 162, 1)">
-                Register
-              </Button>
-            </Group>
-          </Group>
-        </Container>
-      </div>
-
+      <Navigation /> 
+      <HeroSection />
+      {/* <Header /> */}
+      
       {/* Hero Section */}
-      <div style={{ backgroundColor: '#f8fafc', padding: '4rem 0' }}>
-        <Container size="lg">
-          <div style={{ textAlign: 'center', maxWidth: '800px', margin: '0 auto' }}>
-            <Title size="3rem" fw={900} mb="lg" c="#002e6d">
-              Small Business Administration
-              <br />
-              <Text component="span" c="#005ea2">Grant Management System</Text>
-            </Title>
-            <Text size="xl" c="gray.6" mb="xl">
-              Access federal grants, manage applications, and grow your small business with our 
-              comprehensive grant management platform.
-            </Text>
-            <Group justify="center">
-              <Button
-                component={Link}
-                href="/register"
-                size="lg"
-                color="#005ea2"
-                leftSection={<IconTrendingUp size={20} />}
-              >
-                Start Your Application
-              </Button>
-              <Button
-                component={Link}
-                href="/login"
-                size="lg"
-                variant="outline"
-                color="#002e6d"
-              >
-                Access Dashboard
-              </Button>
-            </Group>
+      {/* <section className="relative py-20 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto text-center">
+          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-slate-800 mb-6">
+            SBA Loan Application Portal
+          </h1>
+          <p className="text-xl text-slate-600 mb-8 max-w-3xl mx-auto">
+            Streamline your small business loan application process with our secure, government-style platform. 
+            Get the funding you need to grow your business.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Button
+              size="lg"
+              className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 text-lg"
+              onClick={() => router.push('/register')}
+            >
+              Start Application
+              <ArrowRight className="ml-2 h-5 w-5" />
+            </Button>
+            <Button
+              size="lg"
+              variant="outline"
+              className="border-blue-600 text-blue-600 hover:bg-blue-50 px-8 py-4 text-lg"
+              onClick={() => router.push('/login')}
+            >
+              Existing Users
+            </Button>
           </div>
-        </Container>
-      </div>
+        </div>
+      </section> */}
 
       {/* Features Section */}
-      <Container size="lg" py="4rem">
-        <Title ta="center" mb="3rem" c="#002e6d">
-          Why Choose SBA Grant System?
-        </Title>
-        <Grid>
-          {features.map((feature, index) => (
-            <Grid.Col key={index} span={{ base: 12, sm: 6, md: 3 }}>
-              <Card h="100%" p="lg" radius="md" withBorder>
-                <ThemeIcon size="xl" color="#005ea2" variant="light" mb="md">
-                  <feature.icon size={24} />
-                </ThemeIcon>
-                <Text fw={600} size="lg" mb="xs">
-                  {feature.title}
-                </Text>
-                <Text size="sm" c="dimmed">
-                  {feature.description}
-                </Text>
-              </Card>
-            </Grid.Col>
-          ))}
-        </Grid>
-      </Container>
+      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-white">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl font-bold text-slate-800 mb-4">
+              Why Choose Our Platform?
+            </h2>
+            <p className="text-xl text-slate-600 max-w-3xl mx-auto">
+              Built with security and efficiency in mind, following government standards for grant processing
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+            <Card className="text-center hover:shadow-lg transition-shadow">
+              <CardHeader>
+                <div className="mx-auto w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mb-4">
+                  <FileText className="h-6 w-6 text-blue-600" />
+                </div>
+                <CardTitle className="text-xl">Easy Application</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <CardDescription>]
+                  Streamlined application process with step-by-step guidance and document upload
+                </CardDescription>
+              </CardContent>
+            </Card>
+
+            <Card className="text-center hover:shadow-lg transition-shadow">
+              <CardHeader>
+                <div className="mx-auto w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mb-4">
+                  <Users className="h-6 w-6 text-green-600" />
+                </div>
+                <CardTitle className="text-xl">Expert Review</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <CardDescription>
+                  Professional Grant officers review each application with personalized feedback
+                </CardDescription>
+              </CardContent>
+            </Card>
+
+            <Card className="text-center hover:shadow-lg transition-shadow">
+              <CardHeader>
+                <div className="mx-auto w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mb-4">
+                  <DollarSign className="h-6 w-6 text-purple-600" />
+                </div>
+                <CardTitle className="text-xl">Fast Funding</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <CardDescription>
+                  Quick approval process with funds available for withdrawal upon approval
+                </CardDescription>
+              </CardContent>
+            </Card>
+
+            <Card className="text-center hover:shadow-lg transition-shadow">
+              <CardHeader>
+                <div className="mx-auto w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center mb-4">
+                  <Shield className="h-6 w-6 text-red-600" />
+                </div>
+                <CardTitle className="text-xl">Secure Platform</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <CardDescription>
+                  Bank-level security with encrypted data transmission and secure document storage
+                </CardDescription>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </section>
+
+      {/* Process Section */}
+      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-slate-50">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl font-bold text-slate-800 mb-4">
+              Simple 4-Step Process
+            </h2>
+            <p className="text-xl text-slate-600">
+              From application to funding in as little as 24 hours
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+            {[
+              {
+                step: "1",
+                title: "Register & Apply",
+                description: "Create your account and fill out the grant application form"
+              },
+              {
+                step: "2",
+                title: "Upload Documents",
+                description: "Securely upload required financial documents and statements"
+              },
+              {
+                step: "3",
+                title: "Review Process",
+                description: "Our team reviews your application and provides feedback"
+              },
+              {
+                step: "4",
+                title: "Get Funded",
+                description: "Upon approval, request withdrawal of your approved funds"
+              }
+            ].map((item, index) => (
+              <div key={index} className="text-center">
+                <div className="mx-auto w-16 h-16 bg-blue-600 text-white rounded-full flex items-center justify-center text-2xl font-bold mb-4">
+                  {item.step}
+                </div>
+                <h3 className="text-xl font-semibold text-slate-800 mb-2">{item.title}</h3>
+                <p className="text-slate-600">{item.description}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
 
       {/* CTA Section */}
-      <div style={{ backgroundColor: '#002e6d', color: 'white', padding: '3rem 0' }}>
-        <Container size="lg" ta="center">
-          <Title mb="lg">Ready to Get Started?</Title>
-          <Text size="lg" mb="xl" opacity={0.9}>
-            Join thousands of small businesses that have successfully accessed federal grants.
-          </Text>
+      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-blue-600">
+        <div className="max-w-7xl mx-auto text-center">
+          <h2 className="text-3xl font-bold text-white mb-4">
+            Ready to Get Started?
+          </h2>
+          <p className="text-xl text-blue-100 mb-8">
+            Join thousands of businesses that have successfully secured funding through our platform
+          </p>
           <Button
-            component={Link}
-            href="/register"
             size="lg"
-            color="#005ea2"
-            leftSection={<IconShieldCheck size={20} />}
+            className="bg-white text-blue-600 hover:bg-gray-100 px-8 py-4 text-lg"
+            onClick={() => router.push('/register')}
           >
-            Create Your Account Today
+            Apply Now
+            <ArrowRight className="ml-2 h-5 w-5" />
           </Button>
-        </Container>
-        
-      </div>
+        </div>
+      </section>
+      <FAQSection />
+      <Footer />
     </div>
-    
-  );
-  
+  )
 }
