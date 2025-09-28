@@ -40,9 +40,9 @@ const ProfilePage = observer(() => {
       phone: authStore.user?.phone || '',
     },
     validate: {
-      firstName: (value) => (value.length < 2 ? 'First name must be at least 2 characters' : null),
-      lastName: (value) => (value.length < 2 ? 'Last name must be at least 2 characters' : null),
-      email: (value) => (/^\S+@\S+$/.test(value) ? null : 'Invalid email'),
+      firstName: (value:string) => (value.length < 2 ? 'First name must be at least 2 characters' : null),
+      lastName: (value:string) => (value.length < 2 ? 'Last name must be at least 2 characters' : null),
+      email: (value:string) => (/^\S+@\S+$/.test(value) ? null : 'Invalid email'),
     },
   });
 
