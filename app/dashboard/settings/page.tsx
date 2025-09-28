@@ -11,6 +11,12 @@ import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { IconLock, IconBell, IconShield } from '@tabler/icons-react';
 
+interface PasswordFormValues {
+  currentPassword: string;
+  newPassword: string;
+  confirmPassword: string;
+}
+
 const SettingsPage = observer(() => {
   const router = useRouter();
   const [emailNotifications, setEmailNotifications] = useState(true);
@@ -23,16 +29,16 @@ const SettingsPage = observer(() => {
     }
   }, [authStore.isAuthenticated, router]);
 
-  const passwordForm = useForm({
+  const passwordForm = useForm<PasswordFormValues>({
     initialValues: {
       currentPassword: '',
       newPassword: '',
       confirmPassword: '',
     },
     validate: {
-      currentPassword: (value) => (!value ? 'Current password is required' : null),
-      newPassword: (value) => (value.length < 6 ? 'Password must be at least 6 characters' : null),
-      confirmPassword: (value, values) =>
+      currentPassword: (value: string) => (!value ? 'Current password is required' : null),
+      newPassword: (value: string) => (value.length < 6 ? 'Password must be at least 6 characters' : null),
+      confirmPassword: (value: string, values: PasswordFormValues) =>
         value !== values.newPassword ? 'Passwords do not match' : null,
     },
   });
@@ -41,7 +47,7 @@ const SettingsPage = observer(() => {
     return null;
   }
 
-  const handlePasswordChange = async (values: typeof passwordForm.values) => {
+  const handlePasswordChange = async (values: PasswordFormValues) => {
     try {
       const response = await fetch('/api/profile/password', {
         method: 'PUT',
