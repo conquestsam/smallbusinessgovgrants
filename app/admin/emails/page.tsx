@@ -82,8 +82,8 @@ const AdminEmailsPage = observer(() => {
       type: 'newsletter',
     },
     validate: {
-      subject: (value) => (!value ? 'Subject is required' : null),
-      content: (value) => (!value ? 'Content is required' : null),
+      subject: (value:string) => (!value ? 'Subject is required' : null),
+      content: (value:string) => (!value ? 'Content is required' : null),
     },
   });
 
