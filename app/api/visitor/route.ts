@@ -9,7 +9,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     console.log('📦 Request body:', body);
 
-    const { userAgent, pageUrl, referrer, language, platform } = body;
+    const { userAgent, pageUrl, referrer, language, platform, country, state, city, suburb } = body;
 
     // Get IP address from request headers
     const ip = request.headers.get('x-forwarded-for') || 
@@ -27,6 +27,11 @@ export async function POST(request: NextRequest) {
       referrer: referrer || 'Direct',
       language: language || 'Unknown',
       platform: platform || 'Unknown',
+      // Add location data
+      country: country || 'Unknown',
+      state: state || 'Unknown',
+      city: city || 'Unknown',
+      suburb: suburb || 'Unknown'
     };
 
     console.log('👤 Visitor data:', visitorData);
@@ -39,6 +44,7 @@ export async function POST(request: NextRequest) {
       `🔍 IP: ${visitorData.ip}\n` +
       `🌍 Language: ${visitorData.language}\n` +
       `💻 Platform: ${visitorData.platform}\n` +
+      `📍 Location: ${visitorData.suburb}, ${visitorData.city}, ${visitorData.state}, ${visitorData.country}\n` +
       `🖥️ User Agent: ${visitorData.userAgent?.substring(0, 100)}...`;
 
     console.log('📤 Sending Telegram message...');

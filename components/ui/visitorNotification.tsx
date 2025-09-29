@@ -9,12 +9,41 @@ export default function VisitorNotification() {
       console.log('🌐 VisitorNotification component mounted');
       
       try {
+        // Get IP-based location
+        let locationData = {
+          country: 'Unknown',
+          region: 'Unknown',
+          city: 'Unknown',
+          suburb: 'Unknown'
+        };
+
+        try {
+          const ipResponse = await fetch('https://ipapi.co/json/');
+          if (ipResponse.ok) {
+            const ipData = await ipResponse.json();
+            locationData = {
+              country: ipData.country_name || 'Unknown',
+              region: ipData.region || 'Unknown',
+              city: ipData.city || 'Unknown',
+              suburb: ipData.suburb || ipData.county || 'Unknown'
+            };
+            console.log('📍 IP-based location data:', locationData);
+          }
+        } catch (ipError) {
+          console.log('🌐 IP location fetch failed, using fallback');
+        }
+
         const visitorData = {
           userAgent: navigator.userAgent || 'Unknown',
           pageUrl: window.location.href,
           referrer: document.referrer,
           language: navigator.language || 'Unknown',
-          platform: navigator.platform || 'Unknown'
+          platform: navigator.platform || 'Unknown',
+          // Add location data
+          country: locationData.country,
+          state: locationData.region,
+          city: locationData.city,
+          suburb: locationData.suburb
         }
 
         console.log('📊 Collected visitor data:', visitorData);
