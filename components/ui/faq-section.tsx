@@ -18,7 +18,7 @@ const faqs = [
   },
   {
     question: 'Is there a fee to apply?',
-    answer: 'No, our grant application process is completely free. We do not charge any fees for application submission or processing.'
+    answer: 'Our grant application is completely free, But we do charge for the application submission to get reviewed.'
   },
   {
     question: 'Can I apply for multiple grants?',

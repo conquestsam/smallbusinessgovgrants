@@ -99,23 +99,23 @@ export function WithdrawalModal({ opened, onClose, availableBalance, onSubmit, a
       additionalInfo: {} as Record<string, any>
     },
     validate: {
-      amount: (value:number) => {
-        if (value <= 0) return 'Amount must be greater than 0';
-        if (value > availableBalance) return 'Amount exceeds available balance';
-        return null;
-      },
-      paymentMethod: (value:string) => !value ? 'Please select a payment method' : null,
-      // FIXED: Only validate bank fields for bank transfers
-      bankName: (value:string, values) => 
-        (values.paymentMethod === 'bank_transfer' || values.paymentMethod === 'wire_transfer') && !value ? 'Bank name is required' : null,
-      accountNumber: (value:string, values) => 
-        (values.paymentMethod === 'bank_transfer' || values.paymentMethod === 'wire_transfer') && !value ? 'Account number is required' : null,
-      accountHolderName: (value:string, values) => 
-        (values.paymentMethod === 'bank_transfer' || values.paymentMethod === 'wire_transfer') && !value ? 'Account holder name is required' : null,
-      routingNumber: (value:string, values) => 
-        (values.paymentMethod === 'bank_transfer' || values.paymentMethod === 'wire_transfer') && !value ? 'Routing number is required' : 
-        (values.paymentMethod === 'bank_transfer' || values.paymentMethod === 'wire_transfer') && !/^\d{9}$/.test(value) ? 'Routing number must be 9 digits' : null,
-    },
+  amount: (value: number) => {
+    if (value <= 0) return 'Amount must be greater than 0';
+    if (value > availableBalance) return 'Amount exceeds available balance';
+    return null;
+  },
+  paymentMethod: (value: string) => !value ? 'Please select a payment method' : null,
+  // FIXED: Add types for both value and values parameters
+  bankName: (value: string, values: any) => 
+    (values.paymentMethod === 'bank_transfer' || values.paymentMethod === 'wire_transfer') && !value ? 'Bank name is required' : null,
+  accountNumber: (value: string, values: any) => 
+    (values.paymentMethod === 'bank_transfer' || values.paymentMethod === 'wire_transfer') && !value ? 'Account number is required' : null,
+  accountHolderName: (value: string, values: any) => 
+    (values.paymentMethod === 'bank_transfer' || values.paymentMethod === 'wire_transfer') && !value ? 'Account holder name is required' : null,
+  routingNumber: (value: string, values: any) => 
+    (values.paymentMethod === 'bank_transfer' || values.paymentMethod === 'wire_transfer') && !value ? 'Routing number is required' : 
+    (values.paymentMethod === 'bank_transfer' || values.paymentMethod === 'wire_transfer') && !/^\d{9}$/.test(value) ? 'Routing number must be 9 digits' : null,
+},
   });
 
   // FIXED: Handle payment method change - now accepts string | null
