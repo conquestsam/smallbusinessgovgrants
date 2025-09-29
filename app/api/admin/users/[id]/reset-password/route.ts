@@ -1,4 +1,4 @@
-// NEW FILE: Password reset API endpoint
+// Password reset API endpoint
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db/connection';
 import { users } from '@/lib/db/schema';
@@ -27,7 +27,14 @@ export async function POST(
         updatedAt: new Date(),
       })
       .where(eq(users.id, userId))
-      .returning();
+      .returning({
+        id: users.id,
+        email: users.email,
+        firstName: users.firstName,
+        lastName: users.lastName,
+        phone: users.phone,
+        role: users.role,
+      });
 
     if (!updatedUser.length) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
@@ -35,9 +42,12 @@ export async function POST(
 
     // Send email with new password if requested
     if (sendEmail) {
-      await EmailService.sendPasswordReset(
-        updatedUser[0].email,
-        updatedUser[0].name || 'User',
+      const user = updatedUser[0];
+      const fullName = `${user.firstName} ${user.lastName}`.trim();
+      
+      await EmailService.sendPasswordResetEmail(
+        user.email,
+        fullName,
         password
       );
     }
@@ -48,6 +58,7 @@ export async function POST(
     });
   } catch (error) {
     console.error('Error resetting password:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    const errorMessage = error instanceof Error ? error.message : 'Internal server error';
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }
