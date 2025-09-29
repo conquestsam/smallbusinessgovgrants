@@ -51,7 +51,7 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 export class EmailService {
 
   private static getAppUrl(): string {
-    return process.env.NEXT_PUBLIC_APP_URL || 'https://your-app-url.com'
+    return process.env.NEXT_PUBLIC_APP_URL || 'www.sbagovgrants.com'
   }
 
   // NEW: Withdrawal Status Email Method

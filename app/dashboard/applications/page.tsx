@@ -7,7 +7,8 @@ import { IconPlus, IconEye, IconEdit, IconTrash, IconDots } from '@tabler/icons-
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { authStore } from '@/lib/stores/auth.store';
 import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { ApplicationDetailsModal } from '@/components/modals/ApplicationDetailsModal'; // Adjust import path as needed
 
 // Add interface for application data
 interface Application {
@@ -21,10 +22,18 @@ interface Application {
   status: 'pending' | 'approved' | 'rejected' | 'processing';
   createdAt: string;
   updatedAt: string;
+  // Add additional fields that might be needed for the modal
+  taxId?: string;
+  employeeCount?: string;
+  industry?: string;
+  useOfFunds?: string;
+  documents?: any[];
 }
 
 const ApplicationsPage = observer(() => {
   const router = useRouter();
+  const [selectedApplication, setSelectedApplication] = useState<Application | null>(null);
+  const [modalOpened, setModalOpened] = useState(false);
 
   useEffect(() => {
     if (!authStore.isAuthenticated) {
@@ -32,7 +41,6 @@ const ApplicationsPage = observer(() => {
     }
   }, [authStore.isAuthenticated, router]);
 
-  // CHANGED: Add proper typing to useQuery hook
   const { data: applications = [] } = useQuery<Application[]>({
     queryKey: ['user-applications', authStore.user?.id],
     queryFn: async () => {
@@ -42,6 +50,18 @@ const ApplicationsPage = observer(() => {
     },
     enabled: !!authStore.user?.id,
   });
+
+  // Function to handle view details click
+  const handleViewDetails = (application: Application) => {
+    setSelectedApplication(application);
+    setModalOpened(true);
+  };
+
+  // Function to close modal
+  const handleCloseModal = () => {
+    setModalOpened(false);
+    setSelectedApplication(null);
+  };
 
   if (!authStore.isAuthenticated) {
     return null;
@@ -62,7 +82,6 @@ const ApplicationsPage = observer(() => {
     }
   };
 
-  // FIXED: Safe date formatting function
   const formatDate = (dateString: string) => {
     try {
       return new Date(dateString).toLocaleDateString();
@@ -110,7 +129,7 @@ const ApplicationsPage = observer(() => {
                     <Menu.Dropdown>
                       <Menu.Item 
                         leftSection={<IconEye size={14} />}
-                        onClick={() => router.push(`/dashboard/applications/${app.id}`)}
+                        onClick={() => handleViewDetails(app)}
                       >
                         View Details
                       </Menu.Item>
@@ -145,7 +164,6 @@ const ApplicationsPage = observer(() => {
                   </Text>
                 )}
 
-                {/* FIXED: Use the safe date formatting function */}
                 <Text size="xs" c="dimmed" mb="md">
                   Applied: {formatDate(app.createdAt)}
                 </Text>
@@ -157,7 +175,7 @@ const ApplicationsPage = observer(() => {
                 <Button
                   variant="light"
                   fullWidth
-                  onClick={() => router.push(`/dashboard/applications/${app.id}`)}
+                  onClick={() => handleViewDetails(app)}
                 >
                   View Details
                 </Button>
@@ -185,6 +203,13 @@ const ApplicationsPage = observer(() => {
             </Grid.Col>
           )}
         </Grid>
+
+        {/* Application Details Modal */}
+        <ApplicationDetailsModal
+          opened={modalOpened}
+          onClose={handleCloseModal}
+          application={selectedApplication}
+        />
       </Container>
     </DashboardLayout>
   );

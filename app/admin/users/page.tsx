@@ -3,7 +3,7 @@
 
 import { observer } from 'mobx-react-lite';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Container, Title, Card, Table, Badge, Button, Group, Text, Modal, TextInput, Select, Avatar, ActionIcon, Menu } from '@mantine/core';
+import { Container, Title, Card, Table, Badge, Button, Group, Text, Modal, TextInput, Select, Avatar, ActionIcon, Menu, ScrollArea } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import { notifications } from '@mantine/notifications';
 import { useState } from 'react';
@@ -11,7 +11,8 @@ import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { authStore } from '@/lib/stores/auth.store';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
-import { IconDots, IconEdit, IconLock, IconTrash, IconUserPlus } from '@tabler/icons-react';
+import { IconDots, IconEdit, IconLock, IconTrash, IconUserPlus, IconPlus } from '@tabler/icons-react';
+import { UserModal } from '@/components/modals/UserModal';
 
 const AdminUsersPage = observer(() => {
   const router = useRouter();
@@ -19,6 +20,8 @@ const AdminUsersPage = observer(() => {
   const [opened, { open, close }] = useDisclosure(false);
   const [selectedUser, setSelectedUser] = useState<any>(null);
   const [editMode, setEditMode] = useState(false);
+  const [userModalOpened, setUserModalOpened] = useState(false);
+  const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
 
   useEffect(() => {
     if (!authStore.isAuthenticated || !authStore.isAdmin) {
@@ -26,7 +29,7 @@ const AdminUsersPage = observer(() => {
     }
   }, [authStore.isAuthenticated, authStore.isAdmin, router]);
 
-  const { data: users = [], isLoading } = useQuery({
+  const { data: users = [], isLoading, refetch } = useQuery({
     queryKey: ['admin-users'],
     queryFn: async () => {
       const response = await fetch('/api/admin/users');
@@ -68,10 +71,42 @@ const AdminUsersPage = observer(() => {
     return null;
   }
 
+  const handleCreateUser = () => {
+    setSelectedUser(null);
+    setModalMode('create');
+    setUserModalOpened(true);
+  };
+
   const handleEditUser = (user: any) => {
     setSelectedUser(user);
-    setEditMode(true);
-    open();
+    setModalMode('edit');
+    setUserModalOpened(true);
+  };
+
+  const handleDeleteUser = async (user: any) => {
+    if (!confirm(`Are you sure you want to delete ${user.name}?`)) return;
+
+    try {
+      const response = await fetch(`/api/admin/users/${user.id}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) throw new Error('Failed to delete user');
+
+      notifications.show({
+        title: 'Success',
+        message: 'User deleted successfully',
+        color: 'green',
+      });
+
+      refetch();
+    } catch (error) {
+      notifications.show({
+        title: 'Error',
+        message: 'Failed to delete user',
+        color: 'red',
+      });
+    }
   };
 
   const handleResetPassword = async (userId: string) => {
@@ -121,18 +156,15 @@ const AdminUsersPage = observer(() => {
           <Button
             leftSection={<IconUserPlus size={16} />}
             style={{ backgroundColor: '#005ea2' }}
-            onClick={() => {
-              setSelectedUser(null);
-              setEditMode(false);
-              open();
-            }}
+            onClick={handleCreateUser}
           >
             Add User
           </Button>
         </Group>
 
         <Card withBorder radius="md" shadow="sm">
-          <Table>
+          <ScrollArea>
+            <Table style={{ minWidth: 800 }}>
             <Table.Thead>
               <Table.Tr>
                 <Table.Th>User</Table.Th>
@@ -207,6 +239,7 @@ const AdminUsersPage = observer(() => {
                         <Menu.Item
                           leftSection={<IconTrash size={14} />}
                           color="red"
+                          onClick={() => handleDeleteUser(user)}
                         >
                           Deactivate
                         </Menu.Item>
@@ -217,12 +250,24 @@ const AdminUsersPage = observer(() => {
               ))}
             </Table.Tbody>
           </Table>
+          </ScrollArea>
         </Card>
 
         <Modal opened={opened} onClose={close} title={editMode ? "Edit User" : "Add New User"} size="lg">
           {/* User edit/add form would go here */}
           <Text>User management form implementation</Text>
         </Modal>
+
+        <UserModal
+          opened={userModalOpened}
+          onClose={() => setUserModalOpened(false)}
+          user={selectedUser}
+          mode={modalMode}
+          onSuccess={() => {
+            refetch();
+            setUserModalOpened(false);
+          }}
+        />
       </Container>
     </DashboardLayout>
   );
