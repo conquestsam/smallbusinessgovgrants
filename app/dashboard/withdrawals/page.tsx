@@ -2,7 +2,7 @@
 
 import { observer } from 'mobx-react-lite';
 import { useQuery } from '@tanstack/react-query';
-import { Container, Title, Card, Group, Button, Badge, Text, Grid, Table, ActionIcon, Modal } from '@mantine/core';
+import { Container, Title, Card, Group, Button, Badge, Text, Grid, Table, ActionIcon, Modal, ScrollArea } from '@mantine/core';
 import { IconPlus, IconDownload, IconEye, IconMessageCircle } from '@tabler/icons-react';
 import { useDisclosure } from '@mantine/hooks';
 import { useState } from 'react';
@@ -108,13 +108,13 @@ const WithdrawalsPage = observer(() => {
 
   return (
     <DashboardLayout>
-      <Container size="xl">
+      <Container size="xl" p={{ base: 'xs', sm: 'md' }}>
         <Group justify="space-between" mb="xl">
           <div>
             <Title order={1} c="#002e6d">
               Withdrawal History
             </Title>
-            <Text c="dimmed" size="lg">
+            <Text c="dimmed" size="sm">
               Track your withdrawal requests and payments
             </Text>
           </div>
@@ -122,14 +122,15 @@ const WithdrawalsPage = observer(() => {
             leftSection={<IconPlus size={16} />}
             style={{ backgroundColor: '#005ea2' }}
             onClick={() => router.push('/dashboard/withdraw')}
+            size="sm"
           >
             Request Withdrawal
           </Button>
         </Group>
 
-        <Grid mb="xl">
+        <Grid mb="xl" gutter={{ base: 'xs', sm: 'md' }}>
           <Grid.Col span={{ base: 12, sm: 6, md: 3 }}>
-            <Card withBorder radius="md" shadow="sm" p="xl">
+            <Card withBorder radius="md" shadow="sm" p="md">
               <Text c="dimmed" tt="uppercase" fw={700} size="xs">
                 Total Withdrawn
               </Text>
@@ -140,7 +141,7 @@ const WithdrawalsPage = observer(() => {
           </Grid.Col>
           
           <Grid.Col span={{ base: 12, sm: 6, md: 3 }}>
-            <Card withBorder radius="md" shadow="sm" p="xl">
+            <Card withBorder radius="md" shadow="sm" p="md">
               <Text c="dimmed" tt="uppercase" fw={700} size="xs">
                 Pending Amount
               </Text>
@@ -151,7 +152,7 @@ const WithdrawalsPage = observer(() => {
           </Grid.Col>
           
           <Grid.Col span={{ base: 12, sm: 6, md: 3 }}>
-            <Card withBorder radius="md" shadow="sm" p="xl">
+            <Card withBorder radius="md" shadow="sm" p="md">
               <Text c="dimmed" tt="uppercase" fw={700} size="xs">
                 Total Requests
               </Text>
@@ -162,7 +163,7 @@ const WithdrawalsPage = observer(() => {
           </Grid.Col>
           
           <Grid.Col span={{ base: 12, sm: 6, md: 3 }}>
-            <Card withBorder radius="md" shadow="sm" p="xl">
+            <Card withBorder radius="md" shadow="sm" p="md">
               <Text c="dimmed" tt="uppercase" fw={700} size="xs">
                 Success Rate
               </Text>
@@ -173,88 +174,104 @@ const WithdrawalsPage = observer(() => {
           </Grid.Col>
         </Grid>
 
-        <Card withBorder radius="md" shadow="sm">
-          <Table>
-            <Table.Thead>
-              <Table.Tr>
-                <Table.Th>Withdrawal ID</Table.Th>
-                <Table.Th>Application</Table.Th>
-                <Table.Th>Amount</Table.Th>
-                <Table.Th>Bank Account</Table.Th>
-                <Table.Th>Status</Table.Th>
-                <Table.Th>Date</Table.Th>
-                <Table.Th>Actions</Table.Th>
-              </Table.Tr>
-            </Table.Thead>
-            <Table.Tbody>
-              {withdrawals.length > 0 ? withdrawals.map((withdrawal: any) => (
-                <Table.Tr key={withdrawal.id}>
-                  <Table.Td>
-                    <Text fw={500}>{withdrawal.withdrawalId}</Text>
-                  </Table.Td>
-                  <Table.Td>
-                    <Text size="sm">Application #{withdrawal.applicationId}</Text>
-                  </Table.Td>
-                  <Table.Td>
-                    <Text fw={600}>${Number(withdrawal.amount).toLocaleString()}</Text>
-                  </Table.Td>
-                  <Table.Td>
-                    <Text size="sm">
-                      {withdrawal.bankName}<br />
-                      <Text c="dimmed" size="xs">****{withdrawal.accountNumber?.slice(-4)}</Text>
-                    </Text>
-                  </Table.Td>
-                  <Table.Td>
-                    <Badge color={getStatusColor(withdrawal.status)} variant="light">
-                      {withdrawal.status.toUpperCase()}
-                    </Badge>
-                  </Table.Td>
-                  <Table.Td>
-                    <Text size="sm">
-                      {formatDate(withdrawal.processedAt || withdrawal.createdAt)}
-                    </Text>
-                  </Table.Td>
-                  <Table.Td>
-                    <Group gap="xs">
-                      <ActionIcon 
-                        variant="subtle" 
-                        color="blue"
-                        onClick={() => handleViewReceipt(withdrawal)}
-                      >
-                        <IconEye size={16} />
-                      </ActionIcon>
-                      {withdrawal.status === 'completed' && (
-                        <ActionIcon 
-                          variant="subtle" 
-                          color="green"
-                          onClick={() => handleDownloadReceipt(withdrawal)}
-                        >
-                          <IconDownload size={16} />
-                        </ActionIcon>
-                      )}
-                      {withdrawal.status === 'rejected' && (
-                        <ActionIcon 
-                          variant="subtle" 
-                          color="red"
-                          onClick={handleContactSupport}
-                        >
-                          <IconMessageCircle size={16} />
-                        </ActionIcon>
-                      )}
-                    </Group>
-                  </Table.Td>
-                </Table.Tr>
-              )) : (
-                <Table.Tr>
-                  <Table.Td colSpan={7}>
-                    <Text c="dimmed" ta="center" py="xl">
-                      No withdrawal requests yet. Create your first withdrawal request to get started.
-                    </Text>
-                  </Table.Td>
-                </Table.Tr>
-              )}
-            </Table.Tbody>
-          </Table>
+        <Card withBorder radius="md" shadow="sm" p={0}>
+          <ScrollArea type="always" offsetScrollbars>
+            <div style={{ minWidth: 800, padding: 0 }}>
+              <Table
+                striped
+                highlightOnHover
+                verticalSpacing="sm"
+                horizontalSpacing="md"
+              >
+                <Table.Thead>
+                  <Table.Tr>
+                    <Table.Th w="140px">Withdrawal ID</Table.Th>
+                    <Table.Th w="120px">Application</Table.Th>
+                    <Table.Th w="100px">Amount</Table.Th>
+                    <Table.Th w="150px">Bank Account</Table.Th>
+                    <Table.Th w="100px">Status</Table.Th>
+                    <Table.Th w="100px">Date</Table.Th>
+                    <Table.Th w="120px">Actions</Table.Th>
+                  </Table.Tr>
+                </Table.Thead>
+                <Table.Tbody>
+                  {withdrawals.length > 0 ? withdrawals.map((withdrawal: any) => (
+                    <Table.Tr key={withdrawal.id}>
+                      <Table.Td>
+                        <Text fw={500} size="sm">
+                          {withdrawal.withdrawalId}
+                        </Text>
+                      </Table.Td>
+                      <Table.Td>
+                        <Text size="sm">App #{withdrawal.applicationId}</Text>
+                      </Table.Td>
+                      <Table.Td>
+                        <Text fw={600} size="sm">
+                          ${Number(withdrawal.amount).toLocaleString()}
+                        </Text>
+                      </Table.Td>
+                      <Table.Td>
+                        <Text size="sm">
+                          {withdrawal.bankName}<br />
+                          <Text c="dimmed" size="xs">****{withdrawal.accountNumber?.slice(-4)}</Text>
+                        </Text>
+                      </Table.Td>
+                      <Table.Td>
+                        <Badge color={getStatusColor(withdrawal.status)} variant="light" size="sm">
+                          {withdrawal.status.toUpperCase()}
+                        </Badge>
+                      </Table.Td>
+                      <Table.Td>
+                        <Text size="sm">
+                          {formatDate(withdrawal.processedAt || withdrawal.createdAt)}
+                        </Text>
+                      </Table.Td>
+                      <Table.Td>
+                        <Group gap="xs" wrap="nowrap">
+                          <ActionIcon 
+                            variant="subtle" 
+                            color="blue"
+                            onClick={() => handleViewReceipt(withdrawal)}
+                            size="sm"
+                          >
+                            <IconEye size={14} />
+                          </ActionIcon>
+                          {withdrawal.status === 'completed' && (
+                            <ActionIcon 
+                              variant="subtle" 
+                              color="green"
+                              onClick={() => handleDownloadReceipt(withdrawal)}
+                              size="sm"
+                            >
+                              <IconDownload size={14} />
+                            </ActionIcon>
+                          )}
+                          {withdrawal.status === 'rejected' && (
+                            <ActionIcon 
+                              variant="subtle" 
+                              color="red"
+                              onClick={handleContactSupport}
+                              size="sm"
+                            >
+                              <IconMessageCircle size={14} />
+                            </ActionIcon>
+                          )}
+                        </Group>
+                      </Table.Td>
+                    </Table.Tr>
+                  )) : (
+                    <Table.Tr>
+                      <Table.Td colSpan={7}>
+                        <Text c="dimmed" ta="center" py="xl">
+                          No withdrawal requests yet. Create your first withdrawal request to get started.
+                        </Text>
+                      </Table.Td>
+                    </Table.Tr>
+                  )}
+                </Table.Tbody>
+              </Table>
+            </div>
+          </ScrollArea>
         </Card>
 
         {/* Add receipt modal */}
@@ -305,12 +322,13 @@ const WithdrawalsPage = observer(() => {
                 </Grid>
               </Card>
               
-              <Group justify="space-between">
+              <Group justify="space-between" wrap="wrap">
                 {selectedWithdrawal.status === 'rejected' && (
                   <Button 
                     color="red" 
                     leftSection={<IconMessageCircle size={16} />}
                     onClick={handleContactSupport}
+                    size="sm"
                   >
                     Contact SBA Support
                   </Button>
@@ -320,11 +338,12 @@ const WithdrawalsPage = observer(() => {
                     color="green" 
                     leftSection={<IconDownload size={16} />}
                     onClick={() => handleDownloadReceipt(selectedWithdrawal)}
+                    size="sm"
                   >
                     Download Receipt
                   </Button>
                 )}
-                <Button variant="default" onClick={closeReceipt}>
+                <Button variant="default" onClick={closeReceipt} size="sm">
                   Close
                 </Button>
               </Group>
