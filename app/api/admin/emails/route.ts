@@ -1,9 +1,22 @@
-// NEW FILE: Email center API endpoints
+// Updated route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db/connection';
 import { users, emailLogs } from '@/lib/db/schema';
 import { EmailService } from '@/lib/services/email.service';
-import { eq } from 'drizzle-orm';
+import { eq, inArray } from 'drizzle-orm';
+
+interface User {
+  id: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  role: string;
+}
+
+// Helper function to get full name
+function getUserFullName(user: User): string {
+  return `${user.firstName} ${user.lastName}`.trim();
+}
 
 // NEW: Send bulk email/newsletter
 export async function POST(request: NextRequest) {
@@ -11,32 +24,57 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { subject, content, recipients, type = 'newsletter' } = body;
 
-    let targetUsers = [];
+    let targetUsers: User[] = [];
 
     if (recipients === 'all') {
       // Send to all users
-      targetUsers = await db.select().from(users);
+      targetUsers = await db.select({
+        id: users.id,
+        email: users.email,
+        firstName: users.firstName,
+        lastName: users.lastName,
+        role: users.role,
+      }).from(users);
     } else if (recipients === 'users') {
       // Send to regular users only
-      targetUsers = await db.select().from(users).where(eq(users.role, 'user'));
+      targetUsers = await db.select({
+        id: users.id,
+        email: users.email,
+        firstName: users.firstName,
+        lastName: users.lastName,
+        role: users.role,
+      }).from(users).where(eq(users.role, 'user'));
     } else if (recipients === 'admins') {
       // Send to admins only
-      targetUsers = await db.select().from(users).where(eq(users.role, 'admin'));
+      targetUsers = await db.select({
+        id: users.id,
+        email: users.email,
+        firstName: users.firstName,
+        lastName: users.lastName,
+        role: users.role,
+      }).from(users).where(eq(users.role, 'admin'));
     } else if (Array.isArray(recipients)) {
       // Send to specific user IDs
-      targetUsers = await db.select().from(users).where(
-        // Use IN clause for multiple IDs
-        sql`${users.id} IN ${recipients}`
-      );
+      targetUsers = await db.select({
+        id: users.id,
+        email: users.email,
+        firstName: users.firstName,
+        lastName: users.lastName,
+        role: users.role,
+      }).from(users).where(inArray(users.id, recipients));
     }
 
     const emailPromises = targetUsers.map(async (user) => {
       try {
-        await EmailService.sendNewsletter(user.email, user.name || 'User', subject, content);
+        // Use the existing sendNewsletterToAllUsers method or create a new one
+        await EmailService.sendNewsletterToAllUsers(
+          subject, 
+          content, 
+          [user.email]
+        );
         
         // Log successful email
         await db.insert(emailLogs).values({
-          id: crypto.randomUUID(),
           userId: user.id,
           type,
           subject,
@@ -47,19 +85,20 @@ export async function POST(request: NextRequest) {
 
         return { userId: user.id, status: 'sent' };
       } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        
         // Log failed email
         await db.insert(emailLogs).values({
-          id: crypto.randomUUID(),
           userId: user.id,
           type,
           subject,
           content,
           status: 'failed',
-          error: error.message,
+          error: errorMessage,
           sentAt: new Date(),
         });
 
-        return { userId: user.id, status: 'failed', error: error.message };
+        return { userId: user.id, status: 'failed', error: errorMessage };
       }
     });
 
@@ -74,7 +113,8 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error('Error sending bulk email:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    const errorMessage = error instanceof Error ? error.message : 'Internal server error';
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }
 
@@ -94,7 +134,8 @@ export async function GET(request: NextRequest) {
         status: emailLogs.status,
         sentAt: emailLogs.sentAt,
         error: emailLogs.error,
-        userName: users.name,
+        userFirstName: users.firstName, // Use existing firstName
+        userLastName: users.lastName,   // Use existing lastName
         userEmail: users.email,
       })
       .from(emailLogs)
@@ -106,6 +147,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(logs);
   } catch (error) {
     console.error('Error fetching email logs:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    const errorMessage = error instanceof Error ? error.message : 'Internal server error';
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }

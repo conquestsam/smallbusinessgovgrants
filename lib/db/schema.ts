@@ -77,6 +77,26 @@ export const systemSettings = pgTable('system_settings', {
   updatedBy: uuid('updated_by').references(() => users.id),
   updatedAt: timestamp('updated_at').defaultNow(),
 });
+// Email Logs table
+export const emailLogs = pgTable('email_logs', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  userId: uuid('user_id').references(() => users.id),
+  type: varchar('type', { length: 50 }).notNull(), // 'newsletter', 'notification', 'withdrawal_status', etc.
+  subject: varchar('subject', { length: 255 }).notNull(),
+  content: text('content').notNull(),
+  status: varchar('status', { length: 20 }).notNull(), // 'sent', 'failed', 'pending'
+  error: text('error'),
+  sentAt: timestamp('sent_at').defaultNow(),
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
+// Add to your existing relations section
+export const emailLogsRelations = relations(emailLogs, ({ one }) => ({
+  user: one(users, {
+    fields: [emailLogs.userId],
+    references: [users.id],
+  }),
+}));
 
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({

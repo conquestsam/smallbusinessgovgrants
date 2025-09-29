@@ -214,6 +214,94 @@ export class EmailService {
     }
   }
   
+
+  // Add to EmailService class in email.service.ts
+static async sendNewsletter(to: string, name: string, subject: string, content: string) {
+  const baseStyles = this.getBaseEmailStyles();
+  const appUrl = this.getAppUrl();
+  
+  const html = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>${subject}</title>
+        <style>${baseStyles}</style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header" style="outline:none">
+            <img 
+              src="https://res.cloudinary.com/dt0xkqrvk/image/upload/v1757413998/download_k3vbjl.png"
+              alt="SBA Grant Platform Logo"
+              style="height: 80px; width: auto; margin-bottom: 16px; background-color: white; padding: 8px 16px; border-radius: 8px; display: block; max-width: 100%;"
+            />
+          </div>
+
+          <div class="content">
+            <div style="margin-bottom: 32px;">
+              <p style="font-size: 18px; color: #374151;">Dear ${name},</p>
+            </div>
+
+            <div style="space-y: 24px; color: #374151; line-height: 1.6;">
+              ${content}
+            </div>
+
+            <div style="margin-top: 48px; text-align: center; space-y: 24px;">
+              <div style="margin-top: 32px;">
+                <a href="${appUrl}/dashboard" style="display: inline-block; background: #1e293b; color: white; padding: 16px 32px; border-radius: 8px; font-weight: 600; text-decoration: none; font-size: 18px;">
+                  Access Your Dashboard
+                </a>
+              </div>
+              
+              <div style="padding-top: 32px; space-y: 8px;">
+                <p style="font-size: 18px; font-style: italic; color: #4b5563;"><em>Office of Disaster Assistance</em></p>
+                <p style="font-size: 18px; font-style: italic; color: #4b5563;"><em>U.S. Small Business Administration.</em></p>
+              </div>
+            </div>
+
+            <div style="margin-top: 48px; text-align: center; space-y: 8px;">
+              <p style="font-size: 18px; font-style: italic; color: #4b5563;"><em>Our address:</em></p>
+              <p style="font-size: 18px; font-style: italic; color: #4b5563;"><em>409 3rd St., SW Washington, DC 20416</em></p>
+            </div>
+          </div>
+
+          <div class="footer">
+            <p style="font-size: 18px; font-style: italic; color: #4b5563; margin-bottom: 16px;">
+              <em>Want to change how you receive our commercial emails?</em>
+            </p>
+            <a href="#" style="font-size: 18px; font-style: italic; color: #3b82f6; text-decoration: underline; display: block; margin-bottom: 16px;">
+              <em>Unsubscribe from this list.</em>
+            </a>
+            <div style="padding-top: 16px; border-top: 1px solid #e5e7eb;">
+              <a href="#" style="font-size: 18px; font-weight: bold; color: #374151; font-style: italic; text-decoration: none;">
+                <em><strong>Privacy Policy.</strong></em>
+              </a>
+            </div>
+            <p style="font-size: 12px; margin-top: 16px; color: #6b7280;">
+              This is an automated message. Please do not reply to this email.
+            </p>
+          </div>
+        </div>
+      </body>
+    </html>
+  `;
+  
+  try {
+    await resend.emails.send({
+      from: 'SBA Grant System <noreply@notifications.sbasmallbusinessgrants.com>',
+      to,
+      subject,
+      html
+    });
+    console.log('Newsletter email sent successfully to:', to);
+  } catch (error) {
+    console.error('Newsletter email send error:', error);
+    throw error;
+  }
+}
+
   static async sendApplicationApproval(to: string, data: ApprovalNotificationEmailData, appUrl: string) {
     const baseStyles = this.getBaseEmailStyles()
     const formatGrantPurpose = (purpose: string) => {
