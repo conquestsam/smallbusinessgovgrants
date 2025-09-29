@@ -28,9 +28,9 @@ export function UserModal({ opened, onClose, user, mode, onSuccess }: UserModalP
       password: '', // Only for create mode
     },
     validate: {
-      name: (value) => !value ? 'Name is required' : null,
-      email: (value) => !/^\S+@\S+$/.test(value) ? 'Invalid email' : null,
-      password: (value) => mode === 'create' && !value ? 'Password is required' : null,
+      name: (value:string) => !value ? 'Name is required' : null,
+      email: (value:string) => !/^\S+@\S+$/.test(value) ? 'Invalid email' : null,
+      password: (value:string) => mode === 'create' && !value ? 'Password is required' : null,
     },
   });
 
