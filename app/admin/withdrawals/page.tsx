@@ -3,7 +3,7 @@
 
 import { observer } from 'mobx-react-lite';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Container, Title, Card, Table, Badge, Button, Group, Text, Modal, Textarea, Select } from '@mantine/core';
+import { Container, Title, Card, Table, Badge, Button, Group, Text, Modal, Textarea, Select, ScrollArea } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import { notifications } from '@mantine/notifications';
 import { useState } from 'react';
@@ -106,63 +106,65 @@ const AdminWithdrawalsPage = observer(() => {
         </Title>
 
         <Card withBorder radius="md" shadow="sm">
-          <Table>
-            <Table.Thead>
-              <Table.Tr>
-                <Table.Th>Withdrawal ID</Table.Th>
-                <Table.Th>User</Table.Th>
-                <Table.Th>Application</Table.Th>
-                <Table.Th>Amount</Table.Th>
-                <Table.Th>Bank Details</Table.Th>
-                <Table.Th>Status</Table.Th>
-                <Table.Th>Date</Table.Th>
-                <Table.Th>Actions</Table.Th>
-              </Table.Tr>
-            </Table.Thead>
-            <Table.Tbody>
-              {withdrawals.map((withdrawal: any) => (
-                <Table.Tr key={withdrawal.id}>
-                  <Table.Td>
-                    <Text fw={500} size="sm">{withdrawal.withdrawalId}</Text>
-                  </Table.Td>
-                  <Table.Td>
-                    <Text size="sm">{withdrawal.user?.firstName} {withdrawal.user?.lastName}</Text>
-                    <Text size="xs" c="dimmed">{withdrawal.user?.email}</Text>
-                  </Table.Td>
-                  <Table.Td>
-                    <Text size="sm">{withdrawal.application?.applicationId}</Text>
-                    <Text size="xs" c="dimmed">{withdrawal.application?.businessName}</Text>
-                  </Table.Td>
-                  <Table.Td>
-                    <Text fw={600}>${Number(withdrawal.amount).toLocaleString()}</Text>
-                  </Table.Td>
-                  <Table.Td>
-                    <Text size="sm">{withdrawal.bankName}</Text>
-                    <Text size="xs" c="dimmed">****{withdrawal.accountNumber.slice(-4)}</Text>
-                    <Text size="xs" c="dimmed">{withdrawal.accountHolderName}</Text>
-                  </Table.Td>
-                  <Table.Td>
-                    <Badge color={getStatusColor(withdrawal.status)} variant="light">
-                      {withdrawal.status.toUpperCase()}
-                    </Badge>
-                  </Table.Td>
-                  <Table.Td>
-                    <Text size="sm">{new Date(withdrawal.createdAt).toLocaleDateString()}</Text>
-                  </Table.Td>
-                  <Table.Td>
-                    <Button
-                      size="xs"
-                      variant="light"
-                      onClick={() => handleReview(withdrawal)}
-                      disabled={withdrawal.status === 'completed'}
-                    >
-                      {withdrawal.status === 'completed' ? 'Completed' : 'Process'}
-                    </Button>
-                  </Table.Td>
+          <ScrollArea type="always" offsetScrollbars>
+            <Table miw={900}>
+              <Table.Thead>
+                <Table.Tr>
+                  <Table.Th>Withdrawal ID</Table.Th>
+                  <Table.Th>User</Table.Th>
+                  <Table.Th>Application</Table.Th>
+                  <Table.Th>Amount</Table.Th>
+                  <Table.Th>Bank Details</Table.Th>
+                  <Table.Th>Status</Table.Th>
+                  <Table.Th>Date</Table.Th>
+                  <Table.Th>Actions</Table.Th>
                 </Table.Tr>
-              ))}
-            </Table.Tbody>
-          </Table>
+              </Table.Thead>
+              <Table.Tbody>
+                {withdrawals.map((withdrawal: any) => (
+                  <Table.Tr key={withdrawal.id}>
+                    <Table.Td>
+                      <Text fw={500} size="sm">{withdrawal.withdrawalId}</Text>
+                    </Table.Td>
+                    <Table.Td>
+                      <Text size="sm">{withdrawal.user?.firstName} {withdrawal.user?.lastName}</Text>
+                      <Text size="xs" c="dimmed">{withdrawal.user?.email}</Text>
+                    </Table.Td>
+                    <Table.Td>
+                      <Text size="sm">{withdrawal.application?.applicationId}</Text>
+                      <Text size="xs" c="dimmed">{withdrawal.application?.businessName}</Text>
+                    </Table.Td>
+                    <Table.Td>
+                      <Text fw={600}>${Number(withdrawal.amount).toLocaleString()}</Text>
+                    </Table.Td>
+                    <Table.Td>
+                      <Text size="sm">{withdrawal.bankName}</Text>
+                      <Text size="xs" c="dimmed">****{withdrawal.accountNumber.slice(-4)}</Text>
+                      <Text size="xs" c="dimmed">{withdrawal.accountHolderName}</Text>
+                    </Table.Td>
+                    <Table.Td>
+                      <Badge color={getStatusColor(withdrawal.status)} variant="light">
+                        {withdrawal.status.toUpperCase()}
+                      </Badge>
+                    </Table.Td>
+                    <Table.Td>
+                      <Text size="sm">{new Date(withdrawal.createdAt).toLocaleDateString()}</Text>
+                    </Table.Td>
+                    <Table.Td>
+                      <Button
+                        size="xs"
+                        variant="light"
+                        onClick={() => handleReview(withdrawal)}
+                        disabled={withdrawal.status === 'completed'}
+                      >
+                        {withdrawal.status === 'completed' ? 'Completed' : 'Process'}
+                      </Button>
+                    </Table.Td>
+                  </Table.Tr>
+                ))}
+              </Table.Tbody>
+            </Table>
+          </ScrollArea>
         </Card>
 
         <Modal opened={opened} onClose={close} title="Process Withdrawal" size="lg">
