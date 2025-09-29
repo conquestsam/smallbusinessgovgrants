@@ -99,20 +99,20 @@ export function WithdrawalModal({ opened, onClose, availableBalance, onSubmit, a
       additionalInfo: {} as Record<string, any>
     },
     validate: {
-      amount: (value) => {
+      amount: (value:number) => {
         if (value <= 0) return 'Amount must be greater than 0';
         if (value > availableBalance) return 'Amount exceeds available balance';
         return null;
       },
-      paymentMethod: (value) => !value ? 'Please select a payment method' : null,
+      paymentMethod: (value:string) => !value ? 'Please select a payment method' : null,
       // FIXED: Only validate bank fields for bank transfers
-      bankName: (value, values) => 
+      bankName: (value:string, values) => 
         (values.paymentMethod === 'bank_transfer' || values.paymentMethod === 'wire_transfer') && !value ? 'Bank name is required' : null,
-      accountNumber: (value, values) => 
+      accountNumber: (value:string, values) => 
         (values.paymentMethod === 'bank_transfer' || values.paymentMethod === 'wire_transfer') && !value ? 'Account number is required' : null,
-      accountHolderName: (value, values) => 
+      accountHolderName: (value:string, values) => 
         (values.paymentMethod === 'bank_transfer' || values.paymentMethod === 'wire_transfer') && !value ? 'Account holder name is required' : null,
-      routingNumber: (value, values) => 
+      routingNumber: (value:string, values) => 
         (values.paymentMethod === 'bank_transfer' || values.paymentMethod === 'wire_transfer') && !value ? 'Routing number is required' : 
         (values.paymentMethod === 'bank_transfer' || values.paymentMethod === 'wire_transfer') && !/^\d{9}$/.test(value) ? 'Routing number must be 9 digits' : null,
     },
