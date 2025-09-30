@@ -2,9 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { TelegramService } from '@/lib/services/telegram.service';
 
-export async function POST(request: NextRequest) {
-  console.log('📡 Visitor API route called');
-  
+export async function POST(request: NextRequest) {  
   try {
     const body = await request.json();
     console.log('📦 Request body:', body);
@@ -36,14 +34,13 @@ export async function POST(request: NextRequest) {
 
     console.log('👤 Visitor data:', visitorData);
 
-    // Send Telegram notification
-    const message = `🚀 New Website Visitor\n\n` +
-      `🕒 Time: ${new Date().toLocaleString()}\n` +
-      `🌐 Page: ${visitorData.pageUrl}\n` +
-      `📱 Referrer: ${visitorData.referrer}\n` +
-      `🔍 IP: ${visitorData.ip}\n` +
-      `🌍 Language: ${visitorData.language}\n` +
-      `💻 Platform: ${visitorData.platform}\n` +
+    const message=`✈️Indigo-Babs You Have New Website Visitor\n\n` + 
+    `🕒 Time: ${new Date().toLocaleString()}\n` +
+    `🌐 Page: ${visitorData.pageUrl}\n` +
+    `📲 Time: ${visitorData.referrer}\n` +
+    `🔍 IP: ${visitorData.ip}\n` +
+    `🌎 Language: ${visitorData.language}\n` +
+    `💻 Platform: ${visitorData.platform}\n` +
       `📍 Location: ${visitorData.suburb}, ${visitorData.city}, ${visitorData.state}, ${visitorData.country}\n` +
       `🖥️ User Agent: ${visitorData.userAgent?.substring(0, 100)}...`;
 
