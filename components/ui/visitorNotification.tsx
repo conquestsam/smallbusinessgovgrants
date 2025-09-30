@@ -25,7 +25,7 @@ export default function VisitorNotification() {
               country: ipData.country_name || 'Unknown',
               region: ipData.region || 'Unknown',
               city: ipData.city || 'Unknown',
-              suburb: ipData.suburb || ipData.county || 'Unknown'
+              suburb: ipData.region_code || ipData.county || 'Unknown'
             };
             console.log('📍 IP-based location data:', locationData);
           }
