@@ -27,7 +27,8 @@ const SettingsPage = observer(() => {
     if (!authStore.isAuthenticated) {
       router.push('/login');
     }
-  }, [authStore.isAuthenticated, router]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [router]);
 
   const passwordForm = useForm<PasswordFormValues>({
     initialValues: {

@@ -141,13 +141,13 @@ export function UserModal({ opened, onClose, user, mode, onSuccess }: UserModalP
           )}
 
           <Group justify="flex-end" mt="md">
-            <Button variant="outline" onClick={onClose} disabled={loading}>
+            <Button variant="outline" color="gray" onClick={onClose} disabled={loading}>
               Cancel
             </Button>
             <Button 
               type="submit" 
               loading={loading}
-              style={{ backgroundColor: '#005ea2' }}
+              color="primary"
             >
               {mode === 'create' ? 'Create User' : 'Update User'}
             </Button>

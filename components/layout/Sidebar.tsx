@@ -3,10 +3,10 @@
 import { observer } from 'mobx-react-lite';
 import { useQuery } from '@tanstack/react-query';
 import { NavLink, Stack, Text, Badge } from '@mantine/core';
-import { 
-  IconDashboard, 
-  IconFileText, 
-  IconHistory, 
+import {
+  IconLayoutDashboard,
+  IconFileText,
+  IconHistory,
   IconPlus,
   IconUser,
   IconSettings,
@@ -32,16 +32,17 @@ interface SidebarProps {
 }
 
 const userMenuItems: MenuItem[] = [
-  { label: 'Dashboard', icon: IconDashboard, href: '/dashboard' },
+  { label: 'Dashboard', icon: IconLayoutDashboard, href: '/dashboard' },
   { label: 'Application Status', icon: IconFileText, href: '/dashboard/applications' },
   { label: 'Create Application', icon: IconPlus, href: '/dashboard/apply' },
+  { label: 'Funding & Deposits', icon: IconCreditCard, href: '/dashboard/funding' },
   { label: 'Withdrawal History', icon: IconHistory, href: '/dashboard/withdrawals' },
   { label: 'Profile', icon: IconUser, href: '/dashboard/profile' },
   { label: 'Settings', icon: IconSettings, href: '/dashboard/settings' },
 ];
 
 const adminMenuItems: MenuItem[] = [
-  { label: 'Admin Dashboard', icon: IconDashboard, href: '/admin' },
+  { label: 'Admin Dashboard', icon: IconLayoutDashboard, href: '/admin' },
   { label: 'Applications', icon: IconFileText, href: '/admin/applications' },
   { label: 'Withdrawals', icon: IconCreditCard, href: '/admin/withdrawals' },
   { label: 'Users Management', icon: IconUsers, href: '/admin/users' },

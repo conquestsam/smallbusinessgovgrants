@@ -20,7 +20,8 @@ const WithdrawalsPage = observer(() => {
     if (!authStore.isAuthenticated) {
       router.push('/login');
     }
-  }, [authStore.isAuthenticated, router]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [router]);
 
   // Fetch real withdrawal data from API
   const { data: withdrawals = [] } = useQuery({

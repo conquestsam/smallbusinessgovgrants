@@ -25,14 +25,55 @@ const theme = createTheme({
       '#002e6d', // 9 - darkest
     ],
   },
+  components: {
+    Button: {
+      defaultProps: {
+        color: 'primary',
+      },
+      styles: (theme: any) => ({
+        root: {
+          fontWeight: 600,
+          transition: 'all 0.2s ease',
+          '&[data-variant="filled"]': {
+            backgroundColor: theme.colors.primary[5],
+            '&:hover': {
+              backgroundColor: theme.colors.primary[6],
+            },
+          },
+        },
+      }),
+    },
+    ActionIcon: {
+      defaultProps: {
+        color: 'primary',
+      },
+    },
+    Card: {
+      styles: () => ({
+        root: {
+          transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+        },
+      }),
+    },
+    Modal: {
+      defaultProps: {
+        centered: true,
+        radius: 'md',
+        overlayProps: { backgroundOpacity: 0.55, blur: 3 },
+      },
+    },
+  },
 });
 
 export default function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(() => new QueryClient({
     defaultOptions: {
       queries: {
-        staleTime: 5 * 60 * 1000,
-        gcTime: 10 * 60 * 1000,
+        staleTime: 5 * 60 * 1000,      // 5 min — avoid redundant refetches
+        gcTime: 10 * 60 * 1000,         // 10 min garbage collection
+        refetchOnWindowFocus: false,    // Eliminate focus-triggered refetches
+        retry: 1,                       // Single retry on failure
+        refetchOnReconnect: true,       // Re-fetch after network recovery
       },
     },
   }));

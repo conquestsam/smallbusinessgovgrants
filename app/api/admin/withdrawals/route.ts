@@ -3,21 +3,17 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db/connection';
 import { withdrawals, users, grantApplications } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
-import jwt from 'jsonwebtoken';
+import { getAuthSession } from '@/lib/auth';
 import { EmailService } from '@/lib/services/email.service';
 import { WebSocketService } from '@/lib/services/websocket.service';
 
 export async function GET(request: NextRequest) {
   try {
-    // Verify admin access
-    const token = request.cookies.get('auth-token')?.value;
-    if (!token) {
+    // Verify admin access via Redis session lookup
+    const session = await getAuthSession(request);
+    
+    if (!session || session.role !== 'admin') {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
-    }
-
-    const decoded = jwt.verify(token, process.env.NEXTAUTH_SECRET!) as any;
-    if (decoded.role !== 'admin') {
-      return NextResponse.json({ message: 'Forbidden' }, { status: 403 });
     }
 
     // Fetch withdrawals with user and application data
@@ -64,15 +60,11 @@ export async function PUT(request: NextRequest) {
   try {
     const { withdrawalId, status, adminNotes } = await request.json();
     
-    // Verify admin access
-    const token = request.cookies.get('auth-token')?.value;
-    if (!token) {
+    // Verify admin access via Redis session lookup
+    const session = await getAuthSession(request);
+    
+    if (!session || session.role !== 'admin') {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
-    }
-
-    const decoded = jwt.verify(token, process.env.NEXTAUTH_SECRET!) as any;
-    if (decoded.role !== 'admin') {
-      return NextResponse.json({ message: 'Forbidden' }, { status: 403 });
     }
 
     // Update withdrawal
@@ -81,7 +73,7 @@ export async function PUT(request: NextRequest) {
       .set({
         status,
         adminNotes,
-        processedBy: decoded.userId,
+        processedBy: session.userId,
         processedAt: status === 'completed' ? new Date() : null,
       })
       .where(eq(withdrawals.withdrawalId, withdrawalId))

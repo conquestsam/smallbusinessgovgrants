@@ -8,6 +8,7 @@ import { useDisclosure } from '@mantine/hooks';
 import { notifications } from '@mantine/notifications';
 import { useState } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
+import { SBALoader } from '@/components/ui/SBALoader';
 import { authStore } from '@/lib/stores/auth.store';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
@@ -27,7 +28,8 @@ const AdminApplicationsPage = observer(() => {
     if (!authStore.isAuthenticated || !authStore.isAdmin) {
       router.push('/login');
     }
-  }, [authStore.isAuthenticated, authStore.isAdmin, router]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [router]);
 
   const { data: applications = [], isLoading } = useQuery({
     queryKey: ['admin-applications'],
@@ -121,46 +123,60 @@ const AdminApplicationsPage = observer(() => {
                 </Table.Tr>
               </Table.Thead>
               <Table.Tbody>
-                {applications.map((app: any) => (
-                  <Table.Tr key={app.id}>
-                    <Table.Td>
-                      <Text fw={500} size="sm">{app.applicationId}</Text>
-                    </Table.Td>
-                    <Table.Td>
-                      <Text fw={600}>{app.businessName}</Text>
-                      <Text size="xs" c="dimmed">{app.businessType}</Text>
-                    </Table.Td>
-                    <Table.Td>
-                      <Text size="sm">{app.user?.firstName} {app.user?.lastName}</Text>
-                      <Text size="xs" c="dimmed">{app.user?.email}</Text>
-                    </Table.Td>
-                    <Table.Td>
-                      <Text fw={600}>${Number(app.requestedAmount).toLocaleString()}</Text>
-                      {app.approvedAmount && (
-                        <Text size="xs" c="green">
-                          Approved: ${Number(app.approvedAmount).toLocaleString()}
-                        </Text>
-                      )}
-                    </Table.Td>
-                    <Table.Td>
-                      <Badge color={getStatusColor(app.status)} variant="light">
-                        {app.status.toUpperCase()}
-                      </Badge>
-                    </Table.Td>
-                    <Table.Td>
-                      <Text size="sm">{new Date(app.createdAt).toLocaleDateString()}</Text>
-                    </Table.Td>
-                    <Table.Td>
-                      <Button
-                        size="xs"
-                        variant="light"
-                        onClick={() => handleReview(app)}
-                      >
-                        Review
-                      </Button>
+                {isLoading ? (
+                  <Table.Tr>
+                    <Table.Td colSpan={7} py="xl">
+                      <SBALoader variant="inline" message="Scanning demographic database..." />
                     </Table.Td>
                   </Table.Tr>
-                ))}
+                ) : applications.length > 0 ? (
+                  applications.map((app: any) => (
+                    <Table.Tr key={app.id}>
+                      <Table.Td>
+                        <Text fw={500} size="sm">{app.applicationId}</Text>
+                      </Table.Td>
+                      <Table.Td>
+                        <Text fw={600}>{app.businessName}</Text>
+                        <Text size="xs" c="dimmed">{app.businessType}</Text>
+                      </Table.Td>
+                      <Table.Td>
+                        <Text size="sm">{app.user?.firstName} {app.user?.lastName}</Text>
+                        <Text size="xs" c="dimmed">{app.user?.email}</Text>
+                      </Table.Td>
+                      <Table.Td>
+                        <Text fw={600}>${Number(app.requestedAmount).toLocaleString()}</Text>
+                        {app.approvedAmount && (
+                          <Text size="xs" c="green">
+                            Approved: ${Number(app.approvedAmount).toLocaleString()}
+                          </Text>
+                        )}
+                      </Table.Td>
+                      <Table.Td>
+                        <Badge color={getStatusColor(app.status)} variant="light">
+                          {app.status.toUpperCase()}
+                        </Badge>
+                      </Table.Td>
+                      <Table.Td>
+                        <Text size="sm">{new Date(app.createdAt).toLocaleDateString()}</Text>
+                      </Table.Td>
+                      <Table.Td>
+                        <Button
+                          size="xs"
+                          variant="light"
+                          onClick={() => handleReview(app)}
+                        >
+                          Review
+                        </Button>
+                      </Table.Td>
+                    </Table.Tr>
+                  ))
+                ) : (
+                  <Table.Tr>
+                    <Table.Td colSpan={7} py="xl">
+                      <Text ta="center" c="dimmed">No applications found.</Text>
+                    </Table.Td>
+                  </Table.Tr>
+                )}
               </Table.Tbody>
             </Table>
           </ScrollArea>

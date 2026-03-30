@@ -3,20 +3,16 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db/connection';
 import { grantApplications, users } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
-import jwt from 'jsonwebtoken';
+import { getAuthSession } from '@/lib/auth';
 import { EmailService } from '@/lib/services/email.service';
 
 export async function GET(request: NextRequest) {
   try {
-    // Verify admin access
-    const token = request.cookies.get('auth-token')?.value;
-    if (!token) {
+    // Verify admin access via Redis session lookup
+    const session = await getAuthSession(request);
+    
+    if (!session || session.role !== 'admin') {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
-    }
-
-    const decoded = jwt.verify(token, process.env.NEXTAUTH_SECRET!) as any;
-    if (decoded.role !== 'admin') {
-      return NextResponse.json({ message: 'Forbidden' }, { status: 403 });
     }
 
     // Fetch applications with user data
@@ -58,15 +54,11 @@ export async function PUT(request: NextRequest) {
   try {
     const { applicationId, status, approvedAmount, adminNotes } = await request.json();
     
-    // Verify admin access
-    const token = request.cookies.get('auth-token')?.value;
-    if (!token) {
+    // Verify admin access via Redis session lookup
+    const session = await getAuthSession(request);
+    
+    if (!session || session.role !== 'admin') {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
-    }
-
-    const decoded = jwt.verify(token, process.env.NEXTAUTH_SECRET!) as any;
-    if (decoded.role !== 'admin') {
-      return NextResponse.json({ message: 'Forbidden' }, { status: 403 });
     }
 
     // Get current application data for email
@@ -87,7 +79,7 @@ export async function PUT(request: NextRequest) {
         status,
         approvedAmount: approvedAmount ? approvedAmount.toString() : null,
         adminNotes,
-        reviewedBy: decoded.userId,
+        reviewedBy: session.userId,
         reviewedAt: new Date(),
         updatedAt: new Date(),
       })

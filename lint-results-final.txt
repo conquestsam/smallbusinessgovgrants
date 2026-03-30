@@ -1,0 +1,8 @@
+﻿C:\Users\hp\Documents\smallbusiness\app\admin\settings\emails\page.tsx: line 71, col 46, Error - `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`. (react/no-unescaped-entities)
+C:\Users\hp\Documents\smallbusiness\app\admin\settings\emails\page.tsx: line 71, col 51, Error - `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`. (react/no-unescaped-entities)
+C:\Users\hp\Documents\smallbusiness\app\admin\settings\emails\page.tsx: line 71, col 75, Error - `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`. (react/no-unescaped-entities)
+C:\Users\hp\Documents\smallbusiness\app\admin\settings\emails\page.tsx: line 71, col 81, Error - `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`. (react/no-unescaped-entities)
+C:\Users\hp\Documents\smallbusiness\app\admin\settings\emails\page.tsx: line 71, col 108, Error - `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`. (react/no-unescaped-entities)
+C:\Users\hp\Documents\smallbusiness\app\admin\settings\emails\page.tsx: line 71, col 115, Error - `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`. (react/no-unescaped-entities)
+
+6 problems

@@ -8,6 +8,7 @@ import { Sidebar } from './Sidebar';
 import { SearchBar } from './SearchBar';
 import Image from 'next/image';
 import { useDisclosure } from '@mantine/hooks';
+import { SupportWidget } from '@/components/support/SupportWidget';
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -133,6 +134,7 @@ export const DashboardLayout = observer(({ children }: DashboardLayoutProps) => 
         transition: 'margin-left 0.3s ease',
       }}>
         {children}
+        <SupportWidget />
       </AppShell.Main>
     </AppShell>
   );

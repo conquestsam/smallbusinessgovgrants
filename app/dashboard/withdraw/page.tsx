@@ -11,6 +11,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { IconAlertCircle, IconCreditCard } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
+import { SBALoader } from '@/components/ui/SBALoader';
 
 interface Application {
   id: string;
@@ -39,7 +40,8 @@ const WithdrawPage = observer(() => {
     if (!authStore.isAuthenticated) {
       router.push('/login');
     }
-  }, [authStore.isAuthenticated, router]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [router]);
 
   // Fetch approved applications from database
   const { data: approvedApplications = [], isLoading, error } = useQuery<Application[]>({
@@ -198,11 +200,8 @@ const WithdrawPage = observer(() => {
   if (isLoading) {
     return (
       <DashboardLayout>
-        <Container size="md">
-          <Group justify="center" py="xl">
-            <Loader size="lg" />
-            <Text>Loading your approved applications...</Text>
-          </Group>
+        <Container size="md" py="xl">
+          <SBALoader message="Retrieving approved application records..." />
         </Container>
       </DashboardLayout>
     );

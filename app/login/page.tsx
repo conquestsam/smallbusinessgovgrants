@@ -114,9 +114,15 @@ const LoginPage = observer(() => {
               label="Password"
               placeholder="Your password"
               size="md"
-              mb="xl"
+              mb="sm"
               {...form.getInputProps('password')}
             />
+
+            <Group justify="flex-end" mb="xl">
+              <Anchor component={Link} href="/forgot-password" c="#005ea2" size="sm" fw={500}>
+                Forgot Password?
+              </Anchor>
+            </Group>
 
             <Button
               type="submit"
@@ -132,7 +138,7 @@ const LoginPage = observer(() => {
 
           <Group justify="center" mt="xl">
             <Text size="sm" c="dimmed">
-              Don't have an account?{' '}
+              Don&apos;t have an account?{' '}
               <Anchor component={Link} href="/register" c="#005ea2" fw={500}>
                 Register here
               </Anchor>

@@ -8,6 +8,7 @@ import { useDisclosure } from '@mantine/hooks';
 import { notifications } from '@mantine/notifications';
 import { useState } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
+import { SBALoader } from '@/components/ui/SBALoader';
 import { authStore } from '@/lib/stores/auth.store';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
@@ -26,7 +27,8 @@ const AdminWithdrawalsPage = observer(() => {
     if (!authStore.isAuthenticated || !authStore.isAdmin) {
       router.push('/login');
     }
-  }, [authStore.isAuthenticated, authStore.isAdmin, router]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [router]);
 
   const { data: withdrawals = [] } = useQuery({
     queryKey: ['admin-withdrawals'],
@@ -121,47 +123,61 @@ const AdminWithdrawalsPage = observer(() => {
                 </Table.Tr>
               </Table.Thead>
               <Table.Tbody>
-                {withdrawals.map((withdrawal: any) => (
-                  <Table.Tr key={withdrawal.id}>
-                    <Table.Td>
-                      <Text fw={500} size="sm">{withdrawal.withdrawalId}</Text>
-                    </Table.Td>
-                    <Table.Td>
-                      <Text size="sm">{withdrawal.user?.firstName} {withdrawal.user?.lastName}</Text>
-                      <Text size="xs" c="dimmed">{withdrawal.user?.email}</Text>
-                    </Table.Td>
-                    <Table.Td>
-                      <Text size="sm">{withdrawal.application?.applicationId}</Text>
-                      <Text size="xs" c="dimmed">{withdrawal.application?.businessName}</Text>
-                    </Table.Td>
-                    <Table.Td>
-                      <Text fw={600}>${Number(withdrawal.amount).toLocaleString()}</Text>
-                    </Table.Td>
-                    <Table.Td>
-                      <Text size="sm">{withdrawal.bankName}</Text>
-                      <Text size="xs" c="dimmed">****{withdrawal.accountNumber.slice(-4)}</Text>
-                      <Text size="xs" c="dimmed">{withdrawal.accountHolderName}</Text>
-                    </Table.Td>
-                    <Table.Td>
-                      <Badge color={getStatusColor(withdrawal.status)} variant="light">
-                        {withdrawal.status.toUpperCase()}
-                      </Badge>
-                    </Table.Td>
-                    <Table.Td>
-                      <Text size="sm">{new Date(withdrawal.createdAt).toLocaleDateString()}</Text>
-                    </Table.Td>
-                    <Table.Td>
-                      <Button
-                        size="xs"
-                        variant="light"
-                        onClick={() => handleReview(withdrawal)}
-                        disabled={withdrawal.status === 'completed'}
-                      >
-                        {withdrawal.status === 'completed' ? 'Completed' : 'Process'}
-                      </Button>
+                {isLoading ? (
+                  <Table.Tr>
+                    <Table.Td colSpan={8} py="xl">
+                      <SBALoader variant="inline" message="Archiving financial dispatches..." />
                     </Table.Td>
                   </Table.Tr>
-                ))}
+                ) : withdrawals.length > 0 ? (
+                  withdrawals.map((withdrawal: any) => (
+                    <Table.Tr key={withdrawal.id}>
+                      <Table.Td>
+                        <Text fw={500} size="sm">{withdrawal.withdrawalId}</Text>
+                      </Table.Td>
+                      <Table.Td>
+                        <Text size="sm">{withdrawal.user?.firstName} {withdrawal.user?.lastName}</Text>
+                        <Text size="xs" c="dimmed">{withdrawal.user?.email}</Text>
+                      </Table.Td>
+                      <Table.Td>
+                        <Text size="sm">{withdrawal.application?.applicationId}</Text>
+                        <Text size="xs" c="dimmed">{withdrawal.application?.businessName}</Text>
+                      </Table.Td>
+                      <Table.Td>
+                        <Text fw={600}>${Number(withdrawal.amount).toLocaleString()}</Text>
+                      </Table.Td>
+                      <Table.Td>
+                        <Text size="sm">{withdrawal.bankName}</Text>
+                        <Text size="xs" c="dimmed">****{withdrawal.accountNumber.slice(-4)}</Text>
+                        <Text size="xs" c="dimmed">{withdrawal.accountHolderName}</Text>
+                      </Table.Td>
+                      <Table.Td>
+                        <Badge color={getStatusColor(withdrawal.status)} variant="light">
+                          {withdrawal.status.toUpperCase()}
+                        </Badge>
+                      </Table.Td>
+                      <Table.Td>
+                        <Text size="sm">{new Date(withdrawal.createdAt).toLocaleDateString()}</Text>
+                      </Table.Td>
+                      <Table.Td>
+                        <Button
+                          size="xs"
+                          variant="light"
+                          onClick={() => handleReview(withdrawal)}
+                          disabled={withdrawal.status === 'completed'}
+                        >
+                          {withdrawal.status === 'completed' ? 'Completed' : 'Process'}
+                        </Button>
+                      </Table.Td>
+                    </Table.Tr>
+                  ))
+                ) : (
+                  <Table.Tr>
+                    <Table.Td colSpan={8} py="xl">
+                      <Text ta="center" c="dimmed">No withdrawal requests found.</Text>
+                    </Table.Td>
+                  </Table.Tr>
+                )}
               </Table.Tbody>
             </Table>
           </ScrollArea>

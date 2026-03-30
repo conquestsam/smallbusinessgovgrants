@@ -1,28 +1,34 @@
-// NEW FILE: Admin system settings page
+// app/admin/settings/page.tsx
 'use client';
 
 import { observer } from 'mobx-react-lite';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Container, Title, Card, Grid, TextInput, Button, Group, Switch, Textarea, NumberInput, Select, Divider, Text } from '@mantine/core';
+import { 
+  Title, Card, Grid, TextInput, Button, Group, Switch, 
+  Textarea, NumberInput, Divider, Text, Stack, Tabs, Box 
+} from '@mantine/core';
 import { useForm } from '@mantine/form';
 import { notifications } from '@mantine/notifications';
-import { DashboardLayout } from '@/components/layout/DashboardLayout';
+import { AdminSettingsLayout } from '@/components/layout/AdminSettingsLayout';
 import { authStore } from '@/lib/stores/auth.store';
 import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
-import { IconSettings, IconMail, IconDatabase, IconShield } from '@tabler/icons-react';
+import { useEffect, useState } from 'react';
+import { IconSettings, IconMail, IconDatabase, IconClock } from '@tabler/icons-react';
+import { useUnsavedChanges } from '@/lib/hooks/useUnsavedChanges';
 
-const AdminSettingsPage = observer(() => {
+const GeneralSettingsPage = observer(() => {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const [activeTab, setActiveTab] = useState<string | null>('general');
 
   useEffect(() => {
     if (!authStore.isAuthenticated || !authStore.isAdmin) {
       router.push('/login');
     }
-  }, [authStore.isAuthenticated, authStore.isAdmin, router]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [router]);
 
-  const { data: settings } = useQuery({
+  const { data: settings, isLoading } = useQuery({
     queryKey: ['admin-settings'],
     queryFn: async () => {
       const response = await fetch('/api/admin/settings');
@@ -30,33 +36,6 @@ const AdminSettingsPage = observer(() => {
       return response.json();
     },
     enabled: authStore.isAdmin,
-  });
-
-  const updateSettingsMutation = useMutation({
-    mutationFn: async (data: any) => {
-      const response = await fetch('/api/admin/settings', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      });
-      if (!response.ok) throw new Error('Failed to update settings');
-      return response.json();
-    },
-    onSuccess: () => {
-      notifications.show({
-        title: 'Success',
-        message: 'Settings updated successfully',
-        color: 'green',
-      });
-      queryClient.invalidateQueries({ queryKey: ['admin-settings'] });
-    },
-    onError: () => {
-      notifications.show({
-        title: 'Error',
-        message: 'Failed to update settings',
-        color: 'red',
-      });
-    },
   });
 
   const systemForm = useForm({
@@ -82,220 +61,138 @@ const AdminSettingsPage = observer(() => {
     },
   });
 
-  if (!authStore.isAuthenticated || !authStore.isAdmin) {
-    return null;
-  }
+  // Sync data with forms when fetched
+  useEffect(() => {
+    if (settings) {
+      if (settings.system) systemForm.setValues(settings.system);
+      if (settings.email) emailForm.setValues(settings.email);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [settings]);
 
-  const handleSystemUpdate = (values: typeof systemForm.values) => {
-    updateSettingsMutation.mutate({ type: 'system', ...values });
-  };
+  // Unsaved changes guards
+  useUnsavedChanges(systemForm.isDirty() || emailForm.isDirty());
 
-  const handleEmailUpdate = (values: typeof emailForm.values) => {
-    updateSettingsMutation.mutate({ type: 'email', ...values });
-  };
+  const updateSettingsMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const response = await fetch('/api/admin/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'idempotency-key': `set_${Date.now()}` },
+        body: JSON.stringify(data),
+      });
+      if (!response.ok) throw new Error('Failed to update settings');
+      return response.json();
+    },
+    onSuccess: () => {
+      notifications.show({ title: 'Success', message: 'Configuration updated', color: 'green' });
+      queryClient.invalidateQueries({ queryKey: ['admin-settings'] });
+      systemForm.resetDirty();
+      emailForm.resetDirty();
+    },
+    onError: (err: any) => {
+      notifications.show({ title: 'Error', message: err.message, color: 'red' });
+    },
+  });
+
+  if (!authStore.isAuthenticated || !authStore.isAdmin) return null;
 
   return (
-    <DashboardLayout>
-      <Container size="lg">
-        <Title order={1} c="#002e6d" mb="xl">
-          System Settings
-        </Title>
+    <AdminSettingsLayout>
+      <Stack gap="lg">
+        <Tabs value={activeTab} onChange={setActiveTab} variant="outline" radius="md">
+          <Tabs.List>
+            <Tabs.Tab value="general" leftSection={<IconSettings size={16} />}>General Config</Tabs.Tab>
+            <Tabs.Tab value="email" leftSection={<IconMail size={16} />}>Infrastructure Emails</Tabs.Tab>
+            <Tabs.Tab value="security" leftSection={<IconClock size={16} />}>Security & Logs</Tabs.Tab>
+          </Tabs.List>
 
-        <Grid>
-          <Grid.Col span={12}>
-            <Card withBorder radius="md" shadow="sm" p="xl" mb="md">
-              <Group mb="md">
-                <IconSettings size={20} />
-                <Title order={3}>General Settings</Title>
-              </Group>
-              
-              <form onSubmit={systemForm.onSubmit(handleSystemUpdate)}>
+          <Tabs.Panel value="general" pt="xl">
+            <form onSubmit={systemForm.onSubmit((v) => updateSettingsMutation.mutate({ type: 'system', ...v }))}>
+              <Card withBorder radius="md" p="xl" bg="white">
+                <Title order={3} mb="xl">Platform Parameters</Title>
                 <Grid>
                   <Grid.Col span={{ base: 12, md: 6 }}>
-                    <TextInput
-                      label="Site Name"
-                      {...systemForm.getInputProps('siteName')}
-                    />
+                    <TextInput label="Site Name" {...systemForm.getInputProps('siteName')} />
                   </Grid.Col>
-
                   <Grid.Col span={{ base: 12, md: 6 }}>
-                    <NumberInput
-                      label="Session Timeout (minutes)"
-                      min={5}
-                      max={120}
-                      {...systemForm.getInputProps('sessionTimeout')}
-                    />
+                    <NumberInput label="Session Timeout (min)" {...systemForm.getInputProps('sessionTimeout')} />
                   </Grid.Col>
-
                   <Grid.Col span={12}>
-                    <Textarea
-                      label="Site Description"
-                      minRows={2}
-                      {...systemForm.getInputProps('siteDescription')}
-                    />
+                    <Textarea label="Site Description" minRows={2} {...systemForm.getInputProps('siteDescription')} />
                   </Grid.Col>
-
                   <Grid.Col span={{ base: 12, md: 6 }}>
-                    <NumberInput
-                      label="Minimum Application Amount"
-                      prefix="$"
-                      thousandSeparator=","
-                      {...systemForm.getInputProps('minApplicationAmount')}
-                    />
+                    <NumberInput label="Min Application Amount" prefix="$" thousandSeparator="," {...systemForm.getInputProps('minApplicationAmount')} />
                   </Grid.Col>
-
                   <Grid.Col span={{ base: 12, md: 6 }}>
-                    <NumberInput
-                      label="Maximum Application Amount"
-                      prefix="$"
-                      thousandSeparator=","
-                      {...systemForm.getInputProps('maxApplicationAmount')}
-                    />
+                    <NumberInput label="Max Application Amount" prefix="$" thousandSeparator="," {...systemForm.getInputProps('maxApplicationAmount')} />
                   </Grid.Col>
-
                   <Grid.Col span={12}>
                     <Group>
-                      <Switch
-                        label="Maintenance Mode"
-                        description="Temporarily disable the system for maintenance"
-                        {...systemForm.getInputProps('maintenanceMode', { type: 'checkbox' })}
-                      />
-                      <Switch
-                        label="Registration Enabled"
-                        description="Allow new user registrations"
-                        {...systemForm.getInputProps('registrationEnabled', { type: 'checkbox' })}
-                      />
-                    </Group>
-                  </Grid.Col>
-
-                  <Grid.Col span={12}>
-                    <Group justify="flex-end">
-                      <Button
-                        type="submit"
-                        loading={updateSettingsMutation.isPending}
-                        style={{ backgroundColor: '#005ea2' }}
-                      >
-                        Update System Settings
-                      </Button>
+                      <Switch label="Maintenance Mode" {...systemForm.getInputProps('maintenanceMode', { type: 'checkbox' })} />
+                      <Switch label="Registration Enabled" {...systemForm.getInputProps('registrationEnabled', { type: 'checkbox' })} />
                     </Group>
                   </Grid.Col>
                 </Grid>
-              </form>
-            </Card>
-          </Grid.Col>
+                <Group justify="flex-end" mt="xl">
+                  <Button type="submit" loading={updateSettingsMutation.isPending} disabled={!systemForm.isDirty()}>
+                    Save Changes
+                  </Button>
+                </Group>
+              </Card>
+            </form>
+          </Tabs.Panel>
 
-          <Grid.Col span={12}>
-            <Card withBorder radius="md" shadow="sm" p="xl" mb="md">
-              <Group mb="md">
-                <IconMail size={20} />
-                <Title order={3}>Email Configuration</Title>
-              </Group>
-              
-              <form onSubmit={emailForm.onSubmit(handleEmailUpdate)}>
+          <Tabs.Panel value="email" pt="xl">
+            <form onSubmit={emailForm.onSubmit((v) => updateSettingsMutation.mutate({ type: 'email', ...v }))}>
+              <Card withBorder radius="md" p="xl" bg="white">
+                <Title order={3} mb="xl">SMTP Infrastructure</Title>
                 <Grid>
-                  <Grid.Col span={{ base: 12, md: 6 }}>
-                    <TextInput
-                      label="SMTP Host"
-                      {...emailForm.getInputProps('smtpHost')}
-                    />
-                  </Grid.Col>
-
-                  <Grid.Col span={{ base: 12, md: 6 }}>
-                    <NumberInput
-                      label="SMTP Port"
-                      {...emailForm.getInputProps('smtpPort')}
-                    />
-                  </Grid.Col>
-
-                  <Grid.Col span={{ base: 12, md: 6 }}>
-                    <TextInput
-                      label="SMTP Username"
-                      {...emailForm.getInputProps('smtpUser')}
-                    />
-                  </Grid.Col>
-
-                  <Grid.Col span={{ base: 12, md: 6 }}>
-                    <TextInput
-                      label="SMTP Password"
-                      type="password"
-                      {...emailForm.getInputProps('smtpPassword')}
-                    />
-                  </Grid.Col>
-
-                  <Grid.Col span={{ base: 12, md: 6 }}>
-                    <TextInput
-                      label="From Email"
-                      {...emailForm.getInputProps('fromEmail')}
-                    />
-                  </Grid.Col>
-
-                  <Grid.Col span={{ base: 12, md: 6 }}>
-                    <TextInput
-                      label="From Name"
-                      {...emailForm.getInputProps('fromName')}
-                    />
-                  </Grid.Col>
-
-                  <Grid.Col span={12}>
-                    <Group justify="flex-end">
-                      <Button
-                        type="submit"
-                        loading={updateSettingsMutation.isPending}
-                        style={{ backgroundColor: '#005ea2' }}
-                      >
-                        Update Email Settings
-                      </Button>
-                    </Group>
-                  </Grid.Col>
+                  <Grid.Col span={{ base: 12, md: 6 }}><TextInput label="Host" {...emailForm.getInputProps('smtpHost')} /></Grid.Col>
+                  <Grid.Col span={{ base: 12, md: 6 }}><NumberInput label="Port" {...emailForm.getInputProps('smtpPort')} /></Grid.Col>
+                  <Grid.Col span={{ base: 12, md: 6 }}><TextInput label="User" {...emailForm.getInputProps('smtpUser')} /></Grid.Col>
+                  <Grid.Col span={{ base: 12, md: 6 }}><TextInput label="Password" type="password" {...emailForm.getInputProps('smtpPassword')} /></Grid.Col>
+                  <Grid.Col span={{ base: 12, md: 6 }}><TextInput label="From Email" {...emailForm.getInputProps('fromEmail')} /></Grid.Col>
+                  <Grid.Col span={{ base: 12, md: 6 }}><TextInput label="From Name" {...emailForm.getInputProps('fromName')} /></Grid.Col>
                 </Grid>
-              </form>
-            </Card>
-          </Grid.Col>
+                <Group justify="flex-end" mt="xl">
+                  <Button type="submit" variant="filled" loading={updateSettingsMutation.isPending} disabled={!emailForm.isDirty()}>
+                    Apply Email Protocol
+                  </Button>
+                </Group>
+              </Card>
+            </form>
+          </Tabs.Panel>
 
-          <Grid.Col span={12}>
-            <Card withBorder radius="md" shadow="sm" p="xl">
-              <Group mb="md">
-                <IconDatabase size={20} />
-                <Title order={3}>Database & Security</Title>
-              </Group>
-              
-              <Grid>
-                <Grid.Col span={{ base: 12, md: 6 }}>
-                  <Card bg="gray.0" p="md">
-                    <Text fw={600} mb="xs">Database Status</Text>
-                    <Text size="sm" c="green">Connected</Text>
-                    <Text size="xs" c="dimmed">Last backup: 2 hours ago</Text>
-                  </Card>
-                </Grid.Col>
+          <Tabs.Panel value="security" pt="xl">
+             <Stack gap="md">
+                <Card withBorder radius="md" p="xl">
+                   <Title order={3} mb="md">System Health</Title>
+                   <Grid>
+                     <Grid.Col span={{ base: 12, md: 6 }}>
+                       <Card bg="gray.0" p="md">
+                         <Text fw={600} mb="xs">Database Persistence</Text>
+                         <Text size="sm" c="green">Serverless Optimized</Text>
+                       </Card>
+                     </Grid.Col>
+                     <Grid.Col span={{ base: 12, md: 6 }}>
+                        <Card bg="gray.0" p="md">
+                          <Text fw={600} mb="xs">Resilience Manager</Text>
+                          <Text size="sm" c="teal">Active (Retries: 3)</Text>
+                        </Card>
+                     </Grid.Col>
+                   </Grid>
+                </Card>
 
-                <Grid.Col span={{ base: 12, md: 6 }}>
-                  <Card bg="gray.0" p="md">
-                    <Text fw={600} mb="xs">Redis Cache</Text>
-                    <Text size="sm" c="green">Active</Text>
-                    <Text size="xs" c="dimmed">Memory usage: 45%</Text>
-                  </Card>
-                </Grid.Col>
-
-                <Grid.Col span={12}>
-                  <Group>
-                    <Button variant="outline" color="blue">
-                      Backup Database
-                    </Button>
-                    <Button variant="outline" color="orange">
-                      Clear Cache
-                    </Button>
-                    <Button variant="outline" color="red">
-                      Reset System
-                    </Button>
-                  </Group>
-                </Grid.Col>
-              </Grid>
-            </Card>
-          </Grid.Col>
-        </Grid>
-      </Container>
-    </DashboardLayout>
+                <Card withBorder radius="md" p="xl">
+                   <Title order={4} mb="md">Recent Config Audit</Title>
+                   <Text size="sm" c="dimmed">No changes detected in current session.</Text>
+                </Card>
+             </Stack>
+          </Tabs.Panel>
+        </Tabs>
+      </Stack>
+    </AdminSettingsLayout>
   );
 });
 
-export default AdminSettingsPage;
+export default GeneralSettingsPage;

@@ -1,36 +1,38 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db/connection';
-import { withdrawals, grantApplications, users } from '@/lib/db/schema';
+import { withdrawals, grantApplications, users, notifications as notificationsTable } from '@/lib/db/schema';
 import { TelegramService } from '@/lib/services/telegram.service';
 import { WebSocketService } from '@/lib/services/websocket.service';
-import { EmailService } from '@/lib/services/email.service'; // NEW: Import EmailService
+import { EmailService } from '@/lib/services/email.service';
 import { eq, desc } from 'drizzle-orm';
 
 export async function POST(request: NextRequest) {
   try {
     const data = await request.json();
     
-    // Enhanced withdrawal creation with validation
     // Verify the application exists and is approved
-    const application = await db
+    const applicationResult = await db
       .select()
       .from(grantApplications)
       .where(eq(grantApplications.id, data.applicationId))
       .limit(1);
 
-    if (application.length === 0 || application[0].status !== 'approved') {
+    const application = applicationResult[0];
+    if (!application || application.status !== 'approved') {
       return NextResponse.json(
         { message: 'Invalid or unapproved application' },
         { status: 400 }
       );
     }
 
-    // NEW: Get user info for email notification
+    // Get user info for email notification
     const userResult = await db
       .select()
       .from(users)
       .where(eq(users.id, data.userId))
       .limit(1);
+
+    const user = userResult[0];
 
     const newWithdrawal = await db
       .insert(withdrawals)
@@ -47,9 +49,8 @@ export async function POST(request: NextRequest) {
       })
       .returning();
 
-    // NEW: Send withdrawal submission confirmation email to user
-    if (userResult.length > 0) {
-      const user = userResult[0];
+    // Send withdrawal submission confirmation email to user
+    if (user) {
       try {
         await EmailService.sendWithdrawalStatusEmail({
           name: `${user.firstName} ${user.lastName}`,
@@ -61,26 +62,31 @@ export async function POST(request: NextRequest) {
           processedAt: new Date().toISOString(),
           notes: 'Your withdrawal request has been submitted and is pending review.'
         });
-        console.log('Withdrawal submission email sent successfully to:', user.email);
       } catch (emailError) {
         console.error('Failed to send withdrawal submission email:', emailError);
-        // Don't throw error, continue with other notifications
       }
     }
 
-    // Enhanced notifications
+    // Create platform notification
+    await db.insert(notificationsTable).values({
+      userId: data.userId,
+      title: 'Withdrawal Requested',
+      message: `Your withdrawal request for $${Number(data.amount).toLocaleString()} has been received and is being processed.`,
+      type: 'info',
+    });
+
+    // Telegram & WebSocket notifications
     await TelegramService.sendWithdrawalNotification(
       data.withdrawalId,
       Number(data.amount),
-      application[0].businessName
+      application.businessName
     );
 
-    // Real-time notification to admins
     WebSocketService.emitToAdmins('new_withdrawal', {
       withdrawalId: data.withdrawalId,
       amount: data.amount,
-      businessName: application[0].businessName,
-      userName: userResult.length > 0 ? `${userResult[0].firstName} ${userResult[0].lastName}` : 'Unknown User'
+      businessName: application.businessName,
+      userName: user ? `${user.firstName} ${user.lastName}` : 'Unknown User'
     });
 
     return NextResponse.json({
@@ -101,7 +107,6 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');
 
-    // Use conditional query building instead of reassignment
     let baseQuery = db
       .select({
         id: withdrawals.id,
@@ -118,7 +123,6 @@ export async function GET(request: NextRequest) {
       })
       .from(withdrawals);
 
-    // Build the query conditionally without reassigning the type
     const withdrawalList = userId 
       ? await baseQuery.where(eq(withdrawals.userId, userId)).orderBy(desc(withdrawals.createdAt))
       : await baseQuery.orderBy(desc(withdrawals.createdAt));

@@ -6,6 +6,11 @@
   --foreground-rgb: 0, 0, 0;
   --background-start-rgb: 214, 219, 220;
   --background-end-rgb: 255, 255, 255;
+  /* SBA Brand Colors */
+  --sba-navy: #002e6d;
+  --sba-blue: #005ea2;
+  --sba-light-blue: #0076d6;
+  --sba-accent: #e6f0ff;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -79,4 +84,231 @@
   body {
     @apply bg-background text-foreground;
   }
+}
+
+/* ── SBA Enterprise Loader ── */
+.sba-loader-ring {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 3px solid #e5e7eb;
+  border-top-color: #002e6d;
+  border-right-color: #005ea2;
+  animation: sba-spin 1.2s cubic-bezier(0.5, 0, 0.5, 1) infinite;
+  position: relative;
+}
+
+.sba-loader-logo {
+  animation: sba-pulse 1.8s ease-in-out infinite;
+  filter: drop-shadow(0 1px 2px rgba(0, 46, 109, 0.15));
+}
+
+@keyframes sba-spin {
+  0%   { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes sba-pulse {
+  0%, 100% { opacity: 0.6; transform: scale(0.92); }
+  50%      { opacity: 1;   transform: scale(1); }
+}
+
+.sba-loader-fullscreen {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(248, 250, 252, 0.92);
+  backdrop-filter: blur(4px);
+}
+
+.sba-loader-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(2px);
+  border-radius: inherit;
+}
+
+/* ── Driver.js Site Tour Theme ── */
+.driver-popover {
+  border-radius: 12px !important;
+  box-shadow: 0 20px 60px rgba(0, 46, 109, 0.2) !important;
+  border: 1px solid rgba(0, 94, 162, 0.2) !important;
+}
+
+.driver-popover-title {
+  font-size: 1.1rem !important;
+  font-weight: 700 !important;
+  color: #002e6d !important;
+}
+
+.driver-popover-description {
+  font-size: 0.9rem !important;
+  line-height: 1.6 !important;
+  color: #495057 !important;
+}
+
+.driver-popover-progress-text {
+  color: #005ea2 !important;
+  font-weight: 600 !important;
+}
+
+.driver-popover-next-btn,
+.driver-popover-prev-btn {
+  border-radius: 8px !important;
+  font-weight: 600 !important;
+  padding: 8px 16px !important;
+  text-shadow: none !important;
+}
+
+.driver-popover-next-btn {
+  background: #005ea2 !important;
+  color: white !important;
+  border: none !important;
+}
+
+.driver-popover-next-btn:hover {
+  background: #004d8a !important;
+}
+
+.driver-popover-prev-btn {
+  background: transparent !important;
+  color: #005ea2 !important;
+  border: 1px solid #005ea2 !important;
+}
+
+/* ── Card Hover Animations ── */
+.mantine-Card-root {
+  transition: transform 0.2s ease, box-shadow 0.2s ease !important;
+}
+
+.mantine-Card-root:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.07) !important;
+}
+
+/* ── Smooth Page Transitions ── */
+.mantine-AppShell-main {
+  animation: fadeInUp 0.3s ease-out;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ── Button Pulse for primary action buttons ── */
+@keyframes gentle-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(0, 94, 162, 0.4); }
+  50% { box-shadow: 0 0 0 8px rgba(0, 94, 162, 0); }
+}
+
+/* ── Gradient Stats Card ── */
+.stats-card-gradient {
+  position: relative;
+  overflow: hidden;
+  border-radius: 12px;
+  transition: all 0.3s ease;
+}
+
+.stats-card-gradient:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 32px -8px rgba(0, 46, 109, 0.18) !important;
+}
+
+.stats-card-gradient::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.06);
+  transform: translate(30px, -30px);
+  pointer-events: none;
+}
+
+.stats-card-gradient::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.04);
+  transform: translate(-20px, 20px);
+  pointer-events: none;
+}
+
+/* ── Premium Table Styling ── */
+.mantine-Table-thead {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.mantine-Table-tr {
+  transition: background-color 0.15s ease;
+}
+
+/* ── Notification Badge Pulse ── */
+@keyframes badge-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+}
+
+.badge-pulse {
+  animation: badge-pulse 2s ease-in-out infinite;
+}
+
+/* ── Skeleton Loading ── */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.skeleton-shimmer {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+  border-radius: 8px;
+}
+
+/* ── Feature Card Hover ── */
+.feature-card-hover {
+  transition: all 0.25s ease;
+  cursor: pointer;
+}
+
+.feature-card-hover:hover {
+  background: var(--sba-accent) !important;
+  transform: translateX(4px);
+}
+
+/* ── Scroll indicator fade ── */
+.scroll-fade-bottom::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 40px;
+  background: linear-gradient(transparent, white);
+  pointer-events: none;
 }

@@ -19,7 +19,8 @@ const AdminAnalyticsPage = observer(() => {
     if (!authStore.isAuthenticated || !authStore.isAdmin) {
       router.push('/login');
     }
-  }, [authStore.isAuthenticated, authStore.isAdmin, router]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [router]);
 
   const { data: analytics } = useQuery({
     queryKey: ['admin-analytics', timeRange],

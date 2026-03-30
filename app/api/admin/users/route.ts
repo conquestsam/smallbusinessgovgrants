@@ -3,40 +3,39 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db/connection';
 import { users } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
-import jwt from 'jsonwebtoken';
+import { getAuthSession } from '@/lib/auth';
 import bcrypt from 'bcryptjs';
+
+import { AdminService } from '@/lib/services/admin.service';
 
 export async function GET(request: NextRequest) {
   try {
-    // Verify admin access
-    const token = request.cookies.get('auth-token')?.value;
-    if (!token) {
+    // Verify admin access via Redis session lookup
+    const session = await getAuthSession(request);
+    
+    if (!session || session.role !== 'admin') {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     }
 
-    const decoded = jwt.verify(token, process.env.NEXTAUTH_SECRET!) as any;
-    if (decoded.role !== 'admin') {
-      return NextResponse.json({ message: 'Forbidden' }, { status: 403 });
-    }
+    // Parse Query Parameters
+    const url = new URL(request.url);
+    const search = url.searchParams.get('search') || undefined;
+    const status = url.searchParams.get('status') || undefined;
+    const isBlacklisted = url.searchParams.get('isBlacklisted') === 'true' ? true : 
+                         url.searchParams.get('isBlacklisted') === 'false' ? false : undefined;
+    const limit = parseInt(url.searchParams.get('limit') || '10');
+    const page = parseInt(url.searchParams.get('page') || '1');
+    const offset = (page - 1) * limit;
 
-    // Fetch all users (exclude passwords)
-    const usersList = await db
-      .select({
-        id: users.id,
-        email: users.email,
-        firstName: users.firstName,
-        lastName: users.lastName,
-        phone: users.phone,
-        role: users.role,
-        isActive: users.isActive,
-        isEmailVerified: users.isEmailVerified,
-        lastLoginAt: users.lastLoginAt,
-        createdAt: users.createdAt,
-      })
-      .from(users)
-      .orderBy(users.createdAt);
+    const result = await AdminService.getUsers({
+      search,
+      status,
+      isBlacklisted,
+      limit,
+      offset
+    });
 
-    return NextResponse.json(usersList);
+    return NextResponse.json(result);
   } catch (error) {
     console.error('Admin users fetch error:', error);
     return NextResponse.json(
@@ -50,15 +49,11 @@ export async function PUT(request: NextRequest) {
   try {
     const { userId, updates } = await request.json();
     
-    // Verify admin access
-    const token = request.cookies.get('auth-token')?.value;
-    if (!token) {
+    // Verify admin access via Redis session lookup
+    const session = await getAuthSession(request);
+    
+    if (!session || session.role !== 'admin') {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
-    }
-
-    const decoded = jwt.verify(token, process.env.NEXTAUTH_SECRET!) as any;
-    if (decoded.role !== 'admin') {
-      return NextResponse.json({ message: 'Forbidden' }, { status: 403 });
     }
 
     // Hash password if provided

@@ -93,6 +93,7 @@ export function Navigation() {
         <div className="flex justify-between items-center py-4">
           {/* Logo */}
           <div className="flex items-center">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img 
               src="https://www.sba.gov/themes/custom/sba/dist/img/logo-horizontal.svg" // Update this path to your actual logo file
               alt="SBA Grant Platform Logo"

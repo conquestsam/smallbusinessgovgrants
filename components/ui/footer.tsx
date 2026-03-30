@@ -39,6 +39,7 @@ export function Footer() {
           </div>
           <div>
             <h4 className="text-lg font-semibold mb-4">Contact Info</h4>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img 
               src="https://www.sba.gov/themes/custom/sba/dist/img/logo-horizontal.svg" // Update this path to your actual logo file
               alt="SBA Grant Platform Logo"

@@ -3,19 +3,19 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db/connection';
 import { users } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
-import jwt from 'jsonwebtoken';
+import { getAuthSession } from '@/lib/auth';
 import bcrypt from 'bcryptjs';
 
 export async function PUT(request: NextRequest) {
   try {
-    // Verify authentication
-    const token = request.cookies.get('auth-token')?.value;
-    if (!token) {
+    // Verify authentication via Redis session lookup
+    const session = await getAuthSession(request);
+    
+    if (!session) {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     }
 
-    const decoded = jwt.verify(token, process.env.NEXTAUTH_SECRET!) as any;
-    const userId = decoded.userId;
+    const userId = session.userId;
 
     const { currentPassword, newPassword } = await request.json();
 

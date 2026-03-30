@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db/connection';
-import { grantApplications } from '@/lib/db/schema';
+import { grantApplications, notifications as notificationsTable } from '@/lib/db/schema';
 import { TelegramService } from '@/lib/services/telegram.service';
 import { EmailService } from '@/lib/services/email.service';
 import { eq } from 'drizzle-orm';
@@ -9,10 +9,8 @@ export async function POST(request: NextRequest) {
   try {
     const data = await request.json();
     
-    // 🛠️ FIX: Add validation to ensure we have the user's email
-    if (!data.userEmail) {
-      console.error('Application submission error: userEmail is required for email notification');
-      // You might want to get the user's email from the database or auth session
+    if (!data.userId) {
+      return NextResponse.json({ message: 'User ID is required' }, { status: 400 });
     }
     
     // Create application
@@ -31,27 +29,31 @@ export async function POST(request: NextRequest) {
       })
       .returning();
 
-    // Send notifications
+    // Send Telegram Notification
     await TelegramService.sendApplicationNotification(
       data.applicationId,
       data.businessName,
       Number(data.requestedAmount)
     );
 
-    // 🛠️ FIX: Send application confirmation email - FIXED THE MISSING USER EMAIL
-    // The issue was that data.userEmail might be undefined
+    // Create Platform Notification
+    await db.insert(notificationsTable).values({
+      userId: data.userId,
+      title: 'Application Submitted',
+      message: `Your grant application for ${data.businessName} has been received and is currently under review.`,
+      type: 'info',
+    });
+
+    // Send Email Notification
     if (data.userEmail) {
       await EmailService.sendApplicationStatusEmail({
         name: data.businessName,
-        email: data.userEmail, // 🛠️ This was the main issue - make sure this field exists
+        email: data.userEmail,
         applicationNumber: data.applicationId,
         status: 'submitted',
         requestedAmount: Number(data.requestedAmount || 0),
         submissionDate: new Date().toISOString()
       });
-      console.log('Application confirmation email sent to:', data.userEmail);
-    } else {
-      console.warn('Application submitted but no user email provided for notification');
     }
 
     return NextResponse.json({
@@ -72,15 +74,10 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');
 
-    // Check if userId is provided
     if (!userId) {
-      return NextResponse.json(
-        { message: 'User ID is required' },
-        { status: 400 }
-      );
+      return NextResponse.json({ message: 'User ID is required' }, { status: 400 });
     }
 
-    // Only fetch applications for the specific user
     const applications = await db
       .select()
       .from(grantApplications)
@@ -90,14 +87,10 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(applications);
   } catch (error) {
     console.error('Applications fetch error:', error);
-    return NextResponse.json(
-      { message: 'Internal server error' },
-      { status: 500 }
-    );
+    return NextResponse.json({ message: 'Internal server error' }, { status: 500 });
   }
 }
 
-// 🆕 NEW: Add this function for status updates
 export async function PATCH(request: NextRequest) {
   try {
     const { applicationId, newStatus, userEmail, userName } = await request.json();
@@ -109,10 +102,10 @@ export async function PATCH(request: NextRequest) {
       .where(eq(grantApplications.applicationId, applicationId))
       .returning();
 
-    // Send status change email
     const application = updatedApp[0];
-    
-    // 🛠️ FIX: Add email validation here too
+    if (!application) throw new Error('Application not found');
+
+    // Send status change email
     if (userEmail) {
       await EmailService.sendApplicationStatusEmail({
         name: userName || application.businessName,
@@ -122,19 +115,24 @@ export async function PATCH(request: NextRequest) {
         requestedAmount: Number(application.requestedAmount || 0),
         submissionDate: new Date().toISOString()
       });
-      console.log('Status update email sent to:', userEmail);
-    } else {
-      console.warn('Status updated but no user email provided for notification');
     }
+
+    // Create platform notification for status update
+    await db.insert(notificationsTable).values({
+      userId: application.userId as string,
+      title: 'Application Status Updated',
+      message: `Your application ${application.applicationId} status has been updated to: ${newStatus.toUpperCase()}.`,
+      type: newStatus === 'approved' ? 'success' : newStatus === 'rejected' ? 'error' : 'info',
+    });
 
     return NextResponse.json({ 
       message: 'Status updated successfully',
-      application: updatedApp[0]
+      application: application
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Status update error:', error);
     return NextResponse.json(
-      { message: 'Internal server error' },
+      { message: error.message || 'Internal server error' },
       { status: 500 }
     );
   }

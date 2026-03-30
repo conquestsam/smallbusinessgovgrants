@@ -420,12 +420,12 @@ export function WithdrawalModal({ opened, onClose, availableBalance, onSubmit, a
                 {renderPaymentMethodFields()}
 
                 <Group justify="flex-end" mt="md">
-                  <Button variant="outline" onClick={onClose}>
+                  <Button variant="outline" color="gray" onClick={onClose}>
                     Cancel
                   </Button>
                   <Button 
                     type="submit" 
-                    style={{ backgroundColor: '#005ea2' }}
+                    color="primary"
                     disabled={!selectedPaymentMethod}
                   >
                     Submit Request
@@ -552,7 +552,7 @@ export function WithdrawalModal({ opened, onClose, availableBalance, onSubmit, a
                     resetModal();
                     onClose();
                   }}
-                  style={{ backgroundColor: '#005ea2' }}
+                  color="primary"
                 >
                   Done
                 </Button>
@@ -612,6 +612,7 @@ export function WithdrawalModal({ opened, onClose, availableBalance, onSubmit, a
                 </Button>
                 <Button 
                   variant="outline" 
+                  color="gray"
                   onClick={resetModal}
                 >
                   Try Again
@@ -659,7 +660,7 @@ export function WithdrawalModal({ opened, onClose, availableBalance, onSubmit, a
               >
                 Contact Support
               </Button>
-              <Button variant="outline" onClick={resetModal}>
+              <Button variant="outline" color="gray" onClick={resetModal}>
                 Try Again
               </Button>
             </Stack>

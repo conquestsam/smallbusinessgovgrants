@@ -1,7 +1,7 @@
 // NEW FILE: WebSocket service for real-time communication
 import { Server as SocketIOServer } from 'socket.io';
 import { Server as HTTPServer } from 'http';
-import jwt from 'jsonwebtoken';
+import { CacheService } from '../redis';
 
 export class WebSocketService {
   private static io: SocketIOServer;
@@ -14,14 +14,23 @@ export class WebSocketService {
       }
     });
 
-    this.io.use((socket, next) => {
+    this.io.use(async (socket, next) => {
       try {
         const token = socket.handshake.auth.token;
-        const decoded = jwt.verify(token, process.env.NEXTAUTH_SECRET!) as any;
-        socket.userId = decoded.userId;
-        socket.userRole = decoded.role;
+        if (!token) return next(new Error('Authentication error'));
+
+        // Lookup session in Redis using the opaque token
+        const session = await CacheService.get(`session:${token}`);
+        
+        if (!session) {
+          return next(new Error('Authentication error'));
+        }
+
+        socket.userId = session.userId;
+        socket.userRole = session.role;
         next();
       } catch (err) {
+        console.error('Socket authentication error:', err);
         next(new Error('Authentication error'));
       }
     });

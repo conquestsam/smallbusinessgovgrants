@@ -57,13 +57,20 @@ class AuthStore {
     this.startSessionTimer();
   }
 
-  logout() {
+  async logout() {
     this.user = null;
     this.isAuthenticated = false;
     
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem('sba_user');
-      localStorage.removeItem('sba_session_expiry');
+    try {
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('sba_user');
+        localStorage.removeItem('sba_session_expiry');
+        
+        // REVOKE SESSION IN REDIS (Edge-compatible)
+        await fetch('/api/auth/logout', { method: 'POST' });
+      }
+    } catch (err) {
+      console.error('Logout sync error:', err);
     }
     
     if (this.sessionTimeout) {

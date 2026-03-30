@@ -1,271 +1,266 @@
-// NEW FILE: Admin user management page
 'use client';
 
 import { observer } from 'mobx-react-lite';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Container, Title, Card, Table, Badge, Button, Group, Text, Modal, TextInput, Select, Avatar, ActionIcon, Menu, ScrollArea } from '@mantine/core';
-import { useDisclosure } from '@mantine/hooks';
-import { notifications } from '@mantine/notifications';
-import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { 
+  Container, Title, Card, Table, Badge, Group, Text, 
+  Menu, ActionIcon, TextInput, Select, Stack, 
+  Pagination, Skeleton, Avatar, ScrollArea, Divider
+} from '@mantine/core';
+import { 
+  IconDots, IconEdit, IconSearch, IconFilter, 
+  IconBan, IconUserPause, IconUserCheck, IconUserX, IconTrash 
+} from '@tabler/icons-react';
+import { useState, useEffect } from 'react';
+import { useDebouncedValue } from '@mantine/hooks';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
-import { authStore } from '@/lib/stores/auth.store';
-import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
-import { IconDots, IconEdit, IconLock, IconTrash, IconUserPlus, IconPlus } from '@tabler/icons-react';
-import { UserModal } from '@/components/modals/UserModal';
+import { AdminActionModal } from '@/components/modals/AdminActionModal';
+import { SBALoader } from '@/components/ui/SBALoader';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const AdminUsersPage = observer(() => {
-  const router = useRouter();
-  const queryClient = useQueryClient();
-  const [opened, { open, close }] = useDisclosure(false);
+  const [search, setSearch] = useState('');
+  const [debouncedSearch] = useDebouncedValue(search, 400);
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
+  
   const [selectedUser, setSelectedUser] = useState<any>(null);
-  const [editMode, setEditMode] = useState(false);
-  const [userModalOpened, setUserModalOpened] = useState(false);
-  const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
+  const [actionModalOpened, setActionModalOpened] = useState(false);
+  const [currentAction, setCurrentAction] = useState<'disable' | 'enable' | 'deactivate' | 'soft_delete' | 'blacklist'>('disable');
 
-  useEffect(() => {
-    if (!authStore.isAuthenticated || !authStore.isAdmin) {
-      router.push('/login');
-    }
-  }, [authStore.isAuthenticated, authStore.isAdmin, router]);
-
-  const { data: users = [], isLoading, refetch } = useQuery({
-    queryKey: ['admin-users'],
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: ['admin-users', debouncedSearch, statusFilter, page, limit],
     queryFn: async () => {
-      const response = await fetch('/api/admin/users');
-      if (!response.ok) throw new Error('Failed to fetch users');
+      const params = new URLSearchParams({
+        search: debouncedSearch,
+        status: statusFilter,
+        page: page.toString(),
+        limit: limit.toString(),
+      });
+      const response = await fetch(`/api/admin/users?${params}`);
       return response.json();
-    },
-    enabled: authStore.isAdmin,
-  });
-
-  const updateUserMutation = useMutation({
-    mutationFn: async (data: any) => {
-      const response = await fetch('/api/admin/users', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      });
-      if (!response.ok) throw new Error('Failed to update user');
-      return response.json();
-    },
-    onSuccess: () => {
-      notifications.show({
-        title: 'Success',
-        message: 'User updated successfully',
-        color: 'green',
-      });
-      queryClient.invalidateQueries({ queryKey: ['admin-users'] });
-      close();
-    },
-    onError: () => {
-      notifications.show({
-        title: 'Error',
-        message: 'Failed to update user',
-        color: 'red',
-      });
     },
   });
 
-  if (!authStore.isAuthenticated || !authStore.isAdmin) {
-    return null;
-  }
+  const users = data?.users || [];
+  const total = data?.total || 0;
+  const totalPages = Math.ceil(total / limit);
 
-  const handleCreateUser = () => {
-    setSelectedUser(null);
-    setModalMode('create');
-    setUserModalOpened(true);
+  const getStatusColor = (user: any) => {
+    if (user.isBlacklisted) return 'dark';
+    if (user.deletedAt) return 'orange';
+    if (user.accountStatus === 'disabled') return 'yellow';
+    if (user.accountStatus === 'deactivated') return 'red';
+    return user.isActive ? 'green' : 'gray';
   };
 
-  const handleEditUser = (user: any) => {
+  const handleAdminAction = (user: any, action: typeof currentAction) => {
     setSelectedUser(user);
-    setModalMode('edit');
-    setUserModalOpened(true);
-  };
-
-  const handleDeleteUser = async (user: any) => {
-    if (!confirm(`Are you sure you want to delete ${user.name}?`)) return;
-
-    try {
-      const response = await fetch(`/api/admin/users/${user.id}`, {
-        method: 'DELETE',
-      });
-
-      if (!response.ok) throw new Error('Failed to delete user');
-
-      notifications.show({
-        title: 'Success',
-        message: 'User deleted successfully',
-        color: 'green',
-      });
-
-      refetch();
-    } catch (error) {
-      notifications.show({
-        title: 'Error',
-        message: 'Failed to delete user',
-        color: 'red',
-      });
-    }
-  };
-
-  const handleResetPassword = async (userId: string) => {
-    try {
-      const response = await fetch('/api/admin/users/reset-password', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId }),
-      });
-
-      if (response.ok) {
-        notifications.show({
-          title: 'Success',
-          message: 'Password reset email sent',
-          color: 'green',
-        });
-      }
-    } catch (error) {
-      notifications.show({
-        title: 'Error',
-        message: 'Failed to reset password',
-        color: 'red',
-      });
-    }
-  };
-
-  const getRoleColor = (role: string) => {
-    return role === 'admin' ? 'red' : 'blue';
-  };
-
-  const getStatusColor = (isActive: boolean) => {
-    return isActive ? 'green' : 'red';
+    setCurrentAction(action);
+    setActionModalOpened(true);
   };
 
   return (
     <DashboardLayout>
-      <Container size="xl">
-        <Group justify="space-between" mb="xl">
-          <div>
-            <Title order={1} c="#002e6d">
-              User Management
-            </Title>
-            <Text c="dimmed" size="lg">
-              Manage all system users and their permissions
-            </Text>
-          </div>
-          <Button
-            leftSection={<IconUserPlus size={16} />}
-            style={{ backgroundColor: '#005ea2' }}
-            onClick={handleCreateUser}
-          >
-            Add User
-          </Button>
-        </Group>
+      <Container size="xl" py="md">
+        <Stack gap="lg">
+          <Group justify="space-between">
+            <Stack gap={0}>
+              <Title order={1} c="#002e6d">User Management</Title>
+              <Text size="sm" c="dimmed">Manage platform users, lifecycle statuses, and security overrides.</Text>
+            </Stack>
+          </Group>
 
-        <Card withBorder radius="md" shadow="sm">
-          <ScrollArea>
-            <Table style={{ minWidth: 800 }}>
-            <Table.Thead>
-              <Table.Tr>
-                <Table.Th>User</Table.Th>
-                <Table.Th>Email</Table.Th>
-                <Table.Th>Phone</Table.Th>
-                <Table.Th>Role</Table.Th>
-                <Table.Th>Status</Table.Th>
-                <Table.Th>Last Login</Table.Th>
-                <Table.Th>Actions</Table.Th>
-              </Table.Tr>
-            </Table.Thead>
-            <Table.Tbody>
-              {users.map((user: any) => (
-                <Table.Tr key={user.id}>
-                  <Table.Td>
-                    <Group>
-                      <Avatar
-                        src={user.avatar}
-                        size="sm"
-                        radius="xl"
-                        color="blue"
-                      >
-                        {user.firstName?.[0]}{user.lastName?.[0]}
-                      </Avatar>
-                      <div>
-                        <Text fw={500}>{user.firstName} {user.lastName}</Text>
-                        <Text size="xs" c="dimmed">ID: {user.id.slice(0, 8)}...</Text>
-                      </div>
-                    </Group>
-                  </Table.Td>
-                  <Table.Td>
-                    <Text size="sm">{user.email}</Text>
-                  </Table.Td>
-                  <Table.Td>
-                    <Text size="sm">{user.phone || 'Not provided'}</Text>
-                  </Table.Td>
-                  <Table.Td>
-                    <Badge color={getRoleColor(user.role)} variant="light">
-                      {user.role.toUpperCase()}
-                    </Badge>
-                  </Table.Td>
-                  <Table.Td>
-                    <Badge color={getStatusColor(user.isActive)} variant="light">
-                      {user.isActive ? 'ACTIVE' : 'INACTIVE'}
-                    </Badge>
-                  </Table.Td>
-                  <Table.Td>
-                    <Text size="sm">
-                      {user.lastLoginAt ? new Date(user.lastLoginAt).toLocaleDateString() : 'Never'}
-                    </Text>
-                  </Table.Td>
-                  <Table.Td>
-                    <Menu shadow="md" width={200}>
-                      <Menu.Target>
-                        <ActionIcon variant="subtle" color="gray">
-                          <IconDots size={16} />
-                        </ActionIcon>
-                      </Menu.Target>
-                      <Menu.Dropdown>
-                        <Menu.Item
-                          leftSection={<IconEdit size={14} />}
-                          onClick={() => handleEditUser(user)}
-                        >
-                          Edit User
-                        </Menu.Item>
-                        <Menu.Item
-                          leftSection={<IconLock size={14} />}
-                          onClick={() => handleResetPassword(user.id)}
-                        >
-                          Reset Password
-                        </Menu.Item>
-                        <Menu.Item
-                          leftSection={<IconTrash size={14} />}
-                          color="red"
-                          onClick={() => handleDeleteUser(user)}
-                        >
-                          Deactivate
-                        </Menu.Item>
-                      </Menu.Dropdown>
-                    </Menu>
-                  </Table.Td>
-                </Table.Tr>
-              ))}
-            </Table.Tbody>
-          </Table>
-          </ScrollArea>
-        </Card>
+          <Card withBorder radius="md" shadow="sm" p={0}>
+            <Stack gap={0}>
+              {/* Filter Bar */}
+              <Group p="md" justify="space-between">
+                <Group grow style={{ flex: 1 }}>
+                  <TextInput
+                    placeholder="Search by name or email..."
+                    leftSection={<IconSearch size={16} />}
+                    value={search}
+                    onChange={(e) => setSearch(e.currentTarget.value)}
+                    radius="md"
+                  />
+                  <Select
+                    placeholder="Filter by Status"
+                    leftSection={<IconFilter size={16} />}
+                    data={[
+                      { value: 'all', label: 'All Users' },
+                      { value: 'active', label: 'ActiveOnly' },
+                      { value: 'disabled', label: 'Disabled Only' },
+                      { value: 'deactivated', label: 'Deactivated Only' },
+                    ]}
+                    value={statusFilter}
+                    onChange={(val) => setStatusFilter(val || 'all')}
+                    radius="md"
+                  />
+                </Group>
+                <Select
+                  w={120}
+                  label="Per page"
+                  data={['10', '20', '50']}
+                  value={limit.toString()}
+                  onChange={(val) => setLimit(parseInt(val || '10'))}
+                  radius="md"
+                />
+              </Group>
 
-        <Modal opened={opened} onClose={close} title={editMode ? "Edit User" : "Add New User"} size="lg">
-          {/* User edit/add form would go here */}
-          <Text>User management form implementation</Text>
-        </Modal>
+              <Divider />
 
-        <UserModal
-          opened={userModalOpened}
-          onClose={() => setUserModalOpened(false)}
+              <ScrollArea>
+                <Table highlightOnHover verticalSpacing="md" horizontalSpacing="md">
+                  <Table.Thead bg="gray.0">
+                    <Table.Tr>
+                      <Table.Th>User</Table.Th>
+                      <Table.Th>Role</Table.Th>
+                      <Table.Th>Status</Table.Th>
+                      <Table.Th>Last Login</Table.Th>
+                      <Table.Th>Created At</Table.Th>
+                      <Table.Th w={80}>Actions</Table.Th>
+                    </Table.Tr>
+                  </Table.Thead>
+                  <Table.Tbody>
+                    {isLoading ? (
+                      <Table.Tr>
+                        <Table.Td colSpan={7} py="xl">
+                          <SBALoader variant="inline" message="Scanning demographic database..." />
+                        </Table.Td>
+                      </Table.Tr>
+                    ) : (data && data.users && data.users.length === 0) ? (
+                      <Table.Tr>
+                        <Table.Td colSpan={6} py="xl">
+                          <Stack align="center" gap="xs">
+                            <Text fw={600} c="dimmed">No users found matching filters.</Text>
+                          </Stack>
+                        </Table.Td>
+                      </Table.Tr>
+                    ) : (
+                      <AnimatePresence mode="popLayout">
+                        {users.map((user: any) => (
+                          <motion.tr
+                            key={user.id}
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            layout
+                            style={{ cursor: 'default' }}
+                          >
+                            <Table.Td>
+                              <Group gap="sm">
+                                <Avatar radius="xl" color="blue">
+                                  {user.firstName[0]}{user.lastName[0]}
+                                </Avatar>
+                                <div>
+                                  <Text size="sm" fw={600}>{user.firstName} {user.lastName}</Text>
+                                  <Text size="xs" c="dimmed">{user.email}</Text>
+                                </div>
+                              </Group>
+                            </Table.Td>
+                            <Table.Td>
+                              <Badge variant="light" color={user.role === 'admin' ? 'red' : 'blue'}>
+                                {user.role.toUpperCase()}
+                              </Badge>
+                            </Table.Td>
+                            <Table.Td>
+                              <Badge color={getStatusColor(user)} variant="filled" size="sm">
+                                {user.isBlacklisted ? 'BLACKLISTED' : (user.accountStatus || 'ACTIVE').toUpperCase()}
+                              </Badge>
+                            </Table.Td>
+                            <Table.Td>
+                              <Text size="sm">{user.lastLoginAt ? new Date(user.lastLoginAt).toLocaleDateString() : 'Never'}</Text>
+                            </Table.Td>
+                            <Table.Td>
+                              <Text size="sm">{new Date(user.createdAt).toLocaleDateString()}</Text>
+                            </Table.Td>
+                            <Table.Td>
+                              <Menu position="bottom-end" shadow="md">
+                                <Menu.Target>
+                                  <ActionIcon variant="subtle" color="gray">
+                                    <IconDots size={18} />
+                                  </ActionIcon>
+                                </Menu.Target>
+                                <Menu.Dropdown>
+                                  <Menu.Label>Security Controls</Menu.Label>
+                                  {user.accountStatus !== 'active' ? (
+                                    <Menu.Item
+                                      leftSection={<IconUserCheck size={14} />}
+                                      color="green"
+                                      onClick={() => handleAdminAction(user, 'enable')}
+                                    >
+                                      Re-activate Account
+                                    </Menu.Item>
+                                  ) : (
+                                    <Menu.Item
+                                      leftSection={<IconUserPause size={14} />}
+                                      color="orange"
+                                      onClick={() => handleAdminAction(user, 'disable')}
+                                    >
+                                      Disable Temporarily
+                                    </Menu.Item>
+                                  )}
+                                  <Menu.Item
+                                    leftSection={<IconBan size={14} />}
+                                    color="red"
+                                    onClick={() => handleAdminAction(user, 'blacklist')}
+                                  >
+                                    Enforce Blacklist
+                                  </Menu.Item>
+                                  <Menu.Item
+                                    leftSection={<IconUserX size={14} />}
+                                    color="red"
+                                    onClick={() => handleAdminAction(user, 'deactivate')}
+                                  >
+                                    Liquidate Session
+                                  </Menu.Item>
+                                  <Divider />
+                                  <Menu.Item
+                                    leftSection={<IconTrash size={14} />}
+                                    color="red"
+                                    onClick={() => handleAdminAction(user, 'soft_delete')}
+                                  >
+                                    Soft Delete
+                                  </Menu.Item>
+                                </Menu.Dropdown>
+                              </Menu>
+                            </Table.Td>
+                          </motion.tr>
+                        ))}
+                      </AnimatePresence>
+                    )}
+                  </Table.Tbody>
+                </Table>
+              </ScrollArea>
+
+              <Divider />
+
+              {/* Pagination */}
+              <Group p="md" justify="space-between">
+                <Text size="sm" c="dimmed">
+                  Showing {(page - 1) * limit + 1} to {Math.min(page * limit, total)} of {total} records
+                </Text>
+                <Pagination 
+                  total={totalPages} 
+                  value={page} 
+                  onChange={setPage} 
+                  radius="md"
+                  color="blue"
+                />
+              </Group>
+            </Stack>
+          </Card>
+        </Stack>
+
+        <AdminActionModal
+          opened={actionModalOpened}
+          onClose={() => setActionModalOpened(false)}
           user={selectedUser}
-          mode={modalMode}
+          action={currentAction}
           onSuccess={() => {
             refetch();
-            setUserModalOpened(false);
+            setActionModalOpened(false);
           }}
         />
       </Container>

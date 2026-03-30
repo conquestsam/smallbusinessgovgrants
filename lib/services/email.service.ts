@@ -53,12 +53,120 @@ export interface WithdrawalStatusEmailData {
   appUrl?: string
 }
 
+// NEW: Account Status Change Email Data
+export interface AccountStatusEmailData {
+  name: string
+  email: string
+  status: 'disabled' | 'enabled' | 'deactivated' | 'deleted'
+  reason: string
+  appUrl?: string
+}
+
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 export class EmailService {
 
   private static getAppUrl(): string {
-    return process.env.NEXT_PUBLIC_APP_URL || 'www.sbagovgrants.com'
+    const url = process.env.NEXT_PUBLIC_APP_URL || 'https://www.sbagovgrants.com';
+    // Ensure URL always has a protocol
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      return `https://${url}`;
+    }
+    return url;
+  }
+
+  /** Debug helper — logs Resend config on first call */
+  private static logEmailConfig() {
+    const hasKey = !!process.env.RESEND_API_KEY;
+    console.log(`[EmailService] RESEND_API_KEY present: ${hasKey}, APP_URL: ${this.getAppUrl()}`);
+  }
+  // NEW: Account Status Change Notification
+  static async sendAccountStatusEmail(data: AccountStatusEmailData) {
+    const appUrl = data.appUrl || this.getAppUrl();
+    const baseStyles = this.getBaseEmailStyles();
+
+    const statusConfig: Record<string, { title: string; color: string; bgColor: string }> = {
+      disabled: { title: 'Account Temporarily Disabled', color: '#dc2626', bgColor: '#fef2f2' },
+      enabled: { title: 'Account Re-Enabled', color: '#16a34a', bgColor: '#f0fdf4' },
+      deactivated: { title: 'Account Deactivated', color: '#d97706', bgColor: '#fffbeb' },
+      deleted: { title: 'Account Removed', color: '#dc2626', bgColor: '#fef2f2' },
+    };
+
+    const config = statusConfig[data.status] || statusConfig.disabled;
+
+    const html = `<!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>${config.title}</title>
+        <style>${baseStyles}</style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header" style="outline:none">
+            <img 
+              src="https://res.cloudinary.com/dt0xkqrvk/image/upload/v1757413998/download_k3vbjl.png"
+              alt="SBA Grant Platform Logo"
+              style="height: 80px; width: auto; margin-bottom: 16px; background-color: white; padding: 8px 16px; border-radius: 8px; display: block; max-width: 100%;"
+            />
+          </div>
+
+          <div class="content">
+            <div style="margin-bottom: 32px;">
+              <p style="font-size: 18px; color: #374151;">Dear ${data.name},</p>
+            </div>
+
+            <div style="background-color: ${config.bgColor}; border-left: 4px solid ${config.color}; padding: 24px; border-radius: 8px; margin-bottom: 24px;">
+              <h3 style="font-size: 18px; font-weight: bold; color: ${config.color}; margin-bottom: 8px;">${config.title}</h3>
+              <p style="color: #374151; font-style: italic; margin: 0;">
+                <em>${data.reason}</em>
+              </p>
+            </div>
+
+            ${data.status === 'enabled' ? `
+              <div style="text-align: center; margin-top: 32px;">
+                <a href="${appUrl}/login" style="display: inline-block; background: #1e293b; color: white; padding: 16px 32px; border-radius: 8px; font-weight: 600; text-decoration: none; font-size: 18px;">
+                  Log In to Your Account
+                </a>
+              </div>
+            ` : `
+              <p style="font-size: 16px; color: #64748b;">
+                If you believe this action was taken in error, please contact our support team for assistance.
+              </p>
+            `}
+
+            <div style="margin-top: 48px; text-align: center;">
+              <p style="font-size: 18px; font-style: italic; color: #4b5563;"><em>Office of Disaster Assistance</em></p>
+              <p style="font-size: 18px; font-style: italic; color: #4b5563;"><em>U.S. Small Business Administration.</em></p>
+            </div>
+
+            <div style="margin-top: 32px; text-align: center;">
+              <p style="font-size: 18px; font-style: italic; color: #4b5563;"><em>Our address:</em></p>
+              <p style="font-size: 18px; font-style: italic; color: #4b5563;"><em>409 3rd St., SW Washington, DC 20416</em></p>
+            </div>
+          </div>
+
+          <div class="footer">
+            <p style="font-size: 12px; margin-top: 16px; color: #6b7280;">
+              This is an automated message. Please do not reply to this email.
+            </p>
+          </div>
+        </div>
+      </body>
+    </html>`;
+
+    try {
+      await resend.emails.send({
+        from: 'SBA Grant System <noreply@notifications.sbasmallbusinessgrants.com>',
+        to: data.email,
+        subject: `Account Update — ${config.title}`,
+        html,
+      });
+      console.log(`Account status email sent to ${data.email}: ${data.status}`);
+    } catch (error) {
+      console.error('Account status email error:', error);
+    }
   }
 
   // NEW: Withdrawal Status Email Method
@@ -98,6 +206,7 @@ export class EmailService {
   }
 
   static async sendRegistrationEmail(data: RegistrationEmailData) { 
+    this.logEmailConfig();
     const baseStyles = this.getBaseEmailStyles()
     const appUrl = data.appUrl || this.getAppUrl()
     
