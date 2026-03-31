@@ -225,7 +225,7 @@ const ContactSettingsPage = observer(() => {
           </Group>
           <Text size="sm" c="dimmed">Audit trail for global support routing changes.</Text>
           <Divider my="md" />
-          <Text size="sm" italic>Communications infrastructure is operating within normal parameters.</Text>
+          <Text size="sm" fs="italic">Communications infrastructure is operating within normal parameters.</Text>
         </Card>
 
         <Modal opened={modalOpened} onClose={closeModal} title={selectedMethod ? "Update Routing Rules" : "Provision Support Endpoint"} centered radius="lg">
