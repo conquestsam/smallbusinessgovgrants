@@ -22,7 +22,7 @@ export function AdminActionModal({ opened, onClose, user, action, onSuccess }: A
       reason: '',
     },
     validate: {
-      reason: (value) => (action !== 'enable' && value.length < 5 ? 'Reason must be at least 5 characters' : null),
+      reason: (value: string) => (action !== 'enable' && value.length < 5 ? 'Reason must be at least 5 characters' : null),
     },
   });
 

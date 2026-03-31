@@ -1,5 +1,5 @@
 import { db } from '@/lib/db/connection';
-import { paymentMethods, paymentTransactions, paymentWallets, cryptoWallets } from '@/lib/db/schema';
+import { paymentMethods, paymentTransactions, paymentWallets } from '@/lib/db/schema';
 import { eq, and } from 'drizzle-orm';
 
 // Payment Provider Strategy Interface
@@ -22,7 +22,7 @@ export class StripeProvider implements PaymentProvider {
           .where(and(eq(paymentTransactions.userId, userId), eq(paymentTransactions.idempotencyKey, idempotencyKey)))
           .limit(1);
         
-        if (existing) return { transactionId: existing.transactionId, url: existing.metadata?.checkoutUrl };
+        if (existing) return { transactionId: existing.transactionId, url: (existing.metadata as Record<string, any>)?.checkoutUrl };
       }
 
       const transactionId = `pi_${Math.random().toString(36).substring(7)}`;
@@ -64,7 +64,7 @@ export class CryptoProvider implements PaymentProvider {
           .where(and(eq(paymentTransactions.userId, userId), eq(paymentTransactions.idempotencyKey, idempotencyKey)))
           .limit(1);
         
-        if (existing) return { transactionId: existing.transactionId, instructions: existing.metadata?.instructions };
+        if (existing) return { transactionId: existing.transactionId, instructions: (existing.metadata as Record<string, any>)?.instructions };
       }
 
       // 2. Get Admin Wallet Address
@@ -128,7 +128,7 @@ export class ManualProvider implements PaymentProvider {
           .where(and(eq(paymentTransactions.userId, userId), eq(paymentTransactions.idempotencyKey, idempotencyKey)))
           .limit(1);
         
-        if (existing) return { transactionId: existing.transactionId, instructions: existing.metadata?.instructions };
+        if (existing) return { transactionId: existing.transactionId, instructions: (existing.metadata as Record<string, any>)?.instructions };
       }
 
       const transactionId = `${this.providerName}_${Date.now()}`;

@@ -1,4 +1,4 @@
-import { pgTable, uuid, varchar, text, timestamp, decimal, integer, boolean, jsonb } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, varchar, text, timestamp, decimal, integer, boolean, jsonb, type AnyPgColumn } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 
 // Users table
@@ -20,7 +20,7 @@ export const users = pgTable('users', {
   version: integer('version').default(1).notNull(), // For optimistic locking
   idempotencyKey: varchar('idempotency_key', { length: 100 }), // Prevent duplicate registrations
   deletedAt: timestamp('deleted_at'),
-  deletedByAdminId: uuid('deleted_by_admin_id').references(() => users.id),
+  deletedByAdminId: uuid('deleted_by_admin_id').references((): AnyPgColumn => users.id),
   deleteReason: text('delete_reason'),
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow(),

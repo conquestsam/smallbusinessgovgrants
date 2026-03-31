@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const contentType = request.headers.get('content-type') || '';
-    let firstName, lastName, email, phone, password, confirmPassword;
+    let firstName: string | undefined, lastName: string | undefined, email: string | undefined, phone: string | undefined, password: string | undefined, confirmPassword: string | undefined;
 
     if (contentType.includes('multipart/form-data')) {
       const formData = await request.formData();
@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
       const [existingUser] = await tx
         .select()
         .from(usersTable)
-        .where(eq(usersTable.email, email))
+        .where(eq(usersTable.email, email!))
         .limit(1);
 
       if (existingUser) {
@@ -70,13 +70,13 @@ export async function POST(request: NextRequest) {
       }
 
       // 3. Hash & Insert
-      const hashedPassword = await bcrypt.hash(password, 12);
-      const [newUser] = await tx
+      const hashedPassword = await bcrypt.hash(password!, 12);
+      const newUserResult = await tx
         .insert(usersTable)
         .values({
-          firstName,
-          lastName,
-          email,
+          firstName: firstName!,
+          lastName: lastName!,
+          email: email!,
           phone: phone || null,
           password: hashedPassword,
           idempotencyKey,
@@ -85,6 +85,7 @@ export async function POST(request: NextRequest) {
           isEmailVerified: false,
         })
         .returning();
+      const newUser = (newUserResult as any[])[0];
 
       const { password: _, ...userWithoutPassword } = newUser;
       return { alreadyRegistered: false, user: userWithoutPassword };
