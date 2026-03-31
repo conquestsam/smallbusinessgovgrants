@@ -33,7 +33,7 @@ export default function AccountDisabledPage() {
 
             <Stack align="center" gap="xs">
               <Title order={1} ta="center" c="#002e6d">Account Restricted</Title>
-              <Text c="dimmed" ta="center" size="lg" maxWidth={400}>
+              <Text c="dimmed" ta="center" size="lg" style={{ maxWidth: 400 }}>
                 Your account has been temporarily disabled by a system administrator.
               </Text>
             </Stack>
