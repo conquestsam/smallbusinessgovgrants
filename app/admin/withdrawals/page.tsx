@@ -30,7 +30,7 @@ const AdminWithdrawalsPage = observer(() => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router]);
 
-  const { data: withdrawals = [] } = useQuery({
+  const { data: withdrawals = [], isLoading } = useQuery({
     queryKey: ['admin-withdrawals'],
     queryFn: async () => {
       const response = await fetch('/api/admin/withdrawals');
@@ -189,11 +189,11 @@ const AdminWithdrawalsPage = observer(() => {
               <Text fw={600} mb="md">
                 {selectedWithdrawal.withdrawalId} - ${Number(selectedWithdrawal.amount).toLocaleString()}
               </Text>
-              
+
               <Text size="sm" mb="md">
                 <strong>Account Holder:</strong> {selectedWithdrawal.accountHolderName}
               </Text>
-              
+
               <Text size="sm" mb="md">
                 <strong>Bank:</strong> {selectedWithdrawal.bankName}
               </Text>
