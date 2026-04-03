@@ -13,7 +13,9 @@ import {
   IconUsers,
   IconChartBar,
   IconCreditCard,
-  IconMail
+  IconMail,
+  // [WHY] Added IconReceipt for the new Transaction History nav item
+  IconReceipt,
 } from '@tabler/icons-react';
 import { authStore } from '@/lib/stores/auth.store';
 import { useRouter, usePathname } from 'next/navigation';
@@ -36,6 +38,8 @@ const userMenuItems: MenuItem[] = [
   { label: 'Application Status', icon: IconFileText, href: '/dashboard/applications' },
   { label: 'Create Application', icon: IconPlus, href: '/dashboard/apply' },
   { label: 'Funding & Deposits', icon: IconCreditCard, href: '/dashboard/funding' },
+  // [WHY] New Transaction History page — unified view of all financial activity
+  { label: 'Transaction History', icon: IconReceipt, href: '/dashboard/transactions' },
   { label: 'Withdrawal History', icon: IconHistory, href: '/dashboard/withdrawals' },
   { label: 'Profile', icon: IconUser, href: '/dashboard/profile' },
   { label: 'Settings', icon: IconSettings, href: '/dashboard/settings' },

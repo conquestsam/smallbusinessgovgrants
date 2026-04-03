@@ -256,6 +256,36 @@ export const knowledgeBase = pgTable('knowledge_base', {
   updatedAt: timestamp('updated_at').defaultNow(),
 });
 
+// [WHY] Deposits table tracks the $400 processing fee payment for each grant application
+// [WHAT] After a user submits a grant application, they must pay a processing fee.
+//        This table records which payment method they chose, receipt uploads, and admin approval.
+// [HOW] Admin-configurable fee amount & countdown duration via systemSettings table with fallback defaults
+export const deposits = pgTable('deposits', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  // [WHY] Link deposit to the user who submitted the application
+  userId: uuid('user_id').references(() => users.id).notNull(),
+  // [WHY] Link deposit to the specific grant application it's paying for
+  applicationId: uuid('application_id').references(() => grantApplications.id).notNull(),
+  // [WHAT] Fixed processing fee amount — defaults to $400, admin-configurable via systemSettings
+  amount: decimal('amount', { precision: 12, scale: 2 }).notNull(),
+  // [WHAT] Which method the user selected: 'btc', 'paypal', 'chime'
+  paymentMethod: varchar('payment_method', { length: 50 }).notNull(),
+  // [WHAT] URL of the uploaded receipt image/screenshot (uploaded to Cloudinary)
+  receiptUrl: text('receipt_url'),
+  // [WHAT] Status lifecycle: pending → receipt_uploaded → approved / rejected / expired
+  status: varchar('status', { length: 30 }).default('pending').notNull(),
+  // [WHY] Countdown timer — deposit must be completed before this timestamp
+  // [WHAT] Set to NOW + configured duration (default 10 min) at deposit creation
+  expiresAt: timestamp('expires_at'),
+  // [WHAT] Admin notes for approval/rejection reason
+  adminNotes: text('admin_notes'),
+  // [WHAT] Which admin processed (approved/rejected) this deposit
+  processedBy: uuid('processed_by').references(() => users.id),
+  processedAt: timestamp('processed_at'),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+});
+
 // Add to your existing relations section
 export const emailLogsRelations = relations(emailLogs, ({ one }) => ({
   user: one(users, {
@@ -369,6 +399,22 @@ export const supportMessagesRelations = relations(supportMessages, ({ one }) => 
   }),
   sender: one(users, {
     fields: [supportMessages.senderId],
+    references: [users.id],
+  }),
+}));
+
+// [WHY] Deposits relations for ORM joins — connect deposits to users and applications
+export const depositsRelations = relations(deposits, ({ one }) => ({
+  user: one(users, {
+    fields: [deposits.userId],
+    references: [users.id],
+  }),
+  application: one(grantApplications, {
+    fields: [deposits.applicationId],
+    references: [grantApplications.id],
+  }),
+  processor: one(users, {
+    fields: [deposits.processedBy],
     references: [users.id],
   }),
 }));

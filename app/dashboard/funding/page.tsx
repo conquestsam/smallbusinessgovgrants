@@ -229,7 +229,9 @@ const FundingPage = observer(() => {
                           fullWidth
                           size="md"
                           radius="md"
-                          color="primary"
+                          // [WHY] Using explicit backgroundColor instead of color="primary" to avoid
+                          // TailwindCSS --primary variable collision making buttons invisible
+                          style={{ backgroundColor: '#005ea2' }}
                           rightSection={<IconArrowRight size={18} />}
                           onClick={() => {
                             setSelectedMethod(method);

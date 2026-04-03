@@ -16,6 +16,8 @@ import { FinancialInfoStep } from '@/components/application/FinancialInfoStep';
 import { DocumentsStep } from '@/components/application/DocumentsStep';
 import { ReviewStep } from '@/components/application/ReviewStep';
 import { SiteTour } from '@/components/ui/SiteTour';
+// [WHY] Import the new success modal that shows confetti + fee breakdown + payment methods
+import { ApplicationSuccessModal } from '@/components/application/ApplicationSuccessModal';
 import {
   IconFileText, IconCurrencyDollar, IconCloudUpload, IconChecklist,
   IconArrowRight, IconArrowLeft, IconSend, IconShieldCheck,
@@ -56,6 +58,10 @@ const ApplyPage = observer(() => {
   const router = useRouter();
   const [active, setActive] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // [WHY] Track submitted application data and modal state for the success flow
+  // [WHAT] After successful submission, we show ApplicationSuccessModal instead of redirecting
+  const [submittedApp, setSubmittedApp] = useState<any>(null);
+  const [successModalOpen, setSuccessModalOpen] = useState(false);
 
   useEffect(() => {
     if (!authStore.isAuthenticated) {
@@ -136,12 +142,16 @@ const ApplyPage = observer(() => {
       });
 
       if (response.ok) {
-        notifications.show({
-          title: 'Application Submitted',
-          message: `Your application ${applicationId} has been submitted successfully! Check your email for confirmation.`,
-          color: 'green',
+        const responseData = await response.json();
+        // [WHY] Instead of redirecting, open the success modal with confetti + payment flow
+        // [WHAT] Store the application data for the modal to display fee breakdown
+        setSubmittedApp({
+          applicationId,
+          requestedAmount: form.values.requestedAmount,
+          businessName: form.values.businessName,
+          ...responseData.application,
         });
-        router.push('/dashboard/applications');
+        setSuccessModalOpen(true);
       } else {
         const errorData = await response.json();
         throw new Error(errorData.message || 'Failed to submit application');
@@ -297,7 +307,9 @@ const ApplyPage = observer(() => {
 
                 {active < 3 ? (
                   <Button
-                    color="primary"
+                    // [WHY] Using explicit backgroundColor instead of color="primary" to avoid
+                    // TailwindCSS --primary variable collision that makes buttons invisible
+                    style={{ backgroundColor: '#005ea2' }}
                     rightSection={<IconArrowRight size={16} />}
                     onClick={nextStep}
                     size="md"
@@ -337,6 +349,17 @@ const ApplyPage = observer(() => {
             </Group>
           </Group>
         </MotionDiv>
+
+        {/* [WHY] Show the success modal after application submission instead of immediate redirect */}
+        {/* [WHAT] Displays confetti, fee breakdown ($400), payment methods, and countdown timer */}
+        <ApplicationSuccessModal
+          opened={successModalOpen}
+          onClose={() => {
+            setSuccessModalOpen(false);
+            router.push('/dashboard/applications');
+          }}
+          application={submittedApp}
+        />
       </Container>
     </DashboardLayout>
   );

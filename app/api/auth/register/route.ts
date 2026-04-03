@@ -1,4 +1,9 @@
 // app/api/auth/register/route.ts
+// [SAFETY CHECKLIST]
+// - [ ] No existing test fails.
+// - [ ] No public interface changes unless approved.
+// - [ ] No new runtime exceptions possible.
+
 import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import { db } from '@/lib/db/connection';
@@ -6,6 +11,9 @@ import { users as usersTable, notifications as notificationsTable } from '@/lib/
 import { eq } from 'drizzle-orm';
 import { EmailService } from '@/lib/services/email.service';
 import { TelegramService } from '@/lib/services/telegram.service';
+// [WHY] Import CloudinaryService to handle avatar uploads
+// [WHAT] Used to upload profile picture to Cloudinary and get back a public URL
+import { CloudinaryService } from '@/lib/services/cloudinary.service';
 
 export const dynamic = 'force-dynamic';
 
@@ -15,6 +23,9 @@ export async function POST(request: NextRequest) {
   try {
     const contentType = request.headers.get('content-type') || '';
     let firstName: string | undefined, lastName: string | undefined, email: string | undefined, phone: string | undefined, password: string | undefined, confirmPassword: string | undefined;
+    // [WHY] Track avatar file separately so we can upload it outside the DB transaction
+    // [WHAT] avatarFile holds the raw File object from the multipart form
+    let avatarFile: File | null = null;
 
     if (contentType.includes('multipart/form-data')) {
       const formData = await request.formData();
@@ -24,6 +35,13 @@ export async function POST(request: NextRequest) {
       phone = formData.get('phone') as string;
       password = formData.get('password') as string;
       confirmPassword = formData.get('confirmPassword') as string;
+      // [WHY] Extract avatar file from FormData — this was previously ignored
+      // [WHAT] The client sends a file under the 'avatar' key; we capture it here
+      // [RISK] avatarFile may be null if user didn't upload one — that's intentional
+      const rawAvatar = formData.get('avatar');
+      if (rawAvatar && rawAvatar instanceof File && rawAvatar.size > 0) {
+        avatarFile = rawAvatar;
+      }
     } else {
       const body = await request.json();
       firstName = body.firstName;
@@ -32,6 +50,7 @@ export async function POST(request: NextRequest) {
       phone = body.phone;
       password = body.password;
       confirmPassword = body.confirmPassword;
+      // [WHY] JSON body can't carry binary files — avatar is only available via FormData
     }
 
     if (!firstName || !lastName || !email || !password) {
@@ -40,6 +59,25 @@ export async function POST(request: NextRequest) {
 
     if (password !== confirmPassword) {
       return NextResponse.json({ error: 'Passwords do not match' }, { status: 400 });
+    }
+
+    // [WHY] Upload avatar BEFORE the DB transaction to avoid long-running transactions
+    // [WHAT] Convert the File to Buffer and upload via Cloudinary; get back a URL
+    // [RISK] If Cloudinary upload fails, registration still proceeds without avatar
+    let avatarUrl: string | null = null;
+    if (avatarFile) {
+      try {
+        const arrayBuffer = await avatarFile.arrayBuffer();
+        const buffer = Buffer.from(arrayBuffer);
+        // [WHAT] Use a temporary unique ID for the upload path since we don't have
+        //        the user ID yet — Cloudinary will create a unique public_id
+        const tempId = `temp_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+        avatarUrl = await CloudinaryService.uploadAvatar(buffer, tempId);
+      } catch (avatarError) {
+        // [WHY] Avatar upload failure should NOT block registration
+        // [WHAT] Log the error and proceed — user can update avatar later via profile
+        console.error('Avatar upload failed (non-blocking):', avatarError);
+      }
     }
 
     // ATOMIC REGISTRATION TRANSACTION
@@ -79,6 +117,9 @@ export async function POST(request: NextRequest) {
           email: email!,
           phone: phone || null,
           password: hashedPassword,
+          // [WHY] Store the Cloudinary avatar URL in the DB
+          // [WHAT] Will be null if no avatar was uploaded or if upload failed
+          avatar: avatarUrl,
           idempotencyKey,
           role: 'user',
           isActive: true,

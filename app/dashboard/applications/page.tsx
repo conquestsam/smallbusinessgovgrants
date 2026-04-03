@@ -1,16 +1,30 @@
 'use client';
 
+// [SAFETY CHECKLIST]
+// - [ ] No existing test fails.
+// - [ ] No public interface changes unless approved.
+// - [ ] No new runtime exceptions possible.
+
 import { observer } from 'mobx-react-lite';
 import { useQuery } from '@tanstack/react-query';
-import { Container, Title, Card, Group, Button, Badge, Text, Grid, ActionIcon, Menu } from '@mantine/core';
-import { IconPlus, IconEye, IconEdit, IconTrash, IconDots } from '@tabler/icons-react';
+import {
+  Container, Title, Card, Group, Button, Badge, Text, Stack,
+  ActionIcon, Menu, Paper, ThemeIcon, SimpleGrid, Box, Divider,
+} from '@mantine/core';
+import {
+  IconPlus, IconEye, IconDots, IconFileText,
+  IconCurrencyDollar, IconSparkles,
+} from '@tabler/icons-react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { authStore } from '@/lib/stores/auth.store';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { ApplicationDetailsModal } from '@/components/modals/ApplicationDetailsModal'; // Adjust import path as needed
+import { ApplicationDetailsModal } from '@/components/modals/ApplicationDetailsModal';
+import { motion } from 'framer-motion';
 
-// Add interface for application data
+const MotionDiv = motion.div;
+
+// [WHY] Interface for typed application data
 interface Application {
   id: string;
   applicationId: string;
@@ -22,7 +36,6 @@ interface Application {
   status: 'pending' | 'approved' | 'rejected' | 'processing';
   createdAt: string;
   updatedAt: string;
-  // Add additional fields that might be needed for the modal
   taxId?: string;
   employeeCount?: string;
   industry?: string;
@@ -52,13 +65,12 @@ const ApplicationsPage = observer(() => {
     enabled: !!authStore.user?.id,
   });
 
-  // Function to handle view details click
+  // [WHY] Handle opening the application details modal
   const handleViewDetails = (application: Application) => {
     setSelectedApplication(application);
     setModalOpened(true);
   };
 
-  // Function to close modal
   const handleCloseModal = () => {
     setModalOpened(false);
     setSelectedApplication(null);
@@ -68,142 +80,171 @@ const ApplicationsPage = observer(() => {
     return null;
   }
 
+  // [WHY] Map status to color for visual differentiation
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'approved':
-        return 'green';
-      case 'pending':
-        return 'yellow';
-      case 'rejected':
-        return 'red';
-      case 'processing':
-        return 'blue';
-      default:
-        return 'gray';
+      case 'approved': return 'green';
+      case 'pending': return 'yellow';
+      case 'rejected': return 'red';
+      case 'processing': return 'blue';
+      default: return 'gray';
     }
   };
 
-  const formatDate = (dateString: string) => {
-    try {
-      return new Date(dateString).toLocaleDateString();
-    } catch (error) {
-      console.error('Error formatting date:', error);
-      return 'Invalid date';
+  // [WHY] Map status to a user-friendly label
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case 'approved': return 'Approved';
+      case 'pending': return 'Under Review';
+      case 'rejected': return 'Rejected';
+      case 'processing': return 'Processing';
+      default: return status;
     }
   };
 
   return (
     <DashboardLayout>
-      <Container size="xl">
-        <Group justify="space-between" mb="xl">
-          <div>
-            <Title order={1} c="#002e6d">
-              My Applications
-            </Title>
-            <Text c="dimmed" size="lg">
-              Track and manage your grant applications
-            </Text>
-          </div>
-          <Button
-            leftSection={<IconPlus size={16} />}
-            style={{ backgroundColor: '#005ea2' }}
-            onClick={() => router.push('/dashboard/apply')}
+      <Container size="xl" py="xl">
+        {/* Header */}
+        <MotionDiv initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
+          <Paper
+            radius="lg" p="xl" mb="xl"
+            style={{
+              background: 'linear-gradient(135deg, #002e6d 0%, #005ea2 60%, #0076d6 100%)',
+              color: 'white',
+              position: 'relative',
+              overflow: 'hidden',
+            }}
           >
-            New Application
-          </Button>
-        </Group>
-
-        <Grid>
-          {applications.length > 0 ? applications.map((app: Application) => (
-            <Grid.Col key={app.id} span={{ base: 12, md: 6, lg: 4 }}>
-              <Card withBorder radius="md" shadow="sm" p="lg" h="100%">
-                <Group justify="space-between" mb="md">
-                  <Badge color={getStatusColor(app.status)} variant="light">
-                    {app.status.toUpperCase()}
-                  </Badge>
-                  <Menu shadow="md" width={200}>
-                    <Menu.Target>
-                      <ActionIcon variant="subtle" color="gray">
-                        <IconDots size={16} />
-                      </ActionIcon>
-                    </Menu.Target>
-                    <Menu.Dropdown>
-                      <Menu.Item 
-                        leftSection={<IconEye size={14} />}
-                        onClick={() => handleViewDetails(app)}
-                      >
-                        View Details
-                      </Menu.Item>
-                      {app.status === 'pending' && (
-                        <Menu.Item leftSection={<IconEdit size={14} />}>
-                          Edit Application
-                        </Menu.Item>
-                      )}
-                      <Menu.Item leftSection={<IconTrash size={14} />} color="red">
-                        Delete
-                      </Menu.Item>
-                    </Menu.Dropdown>
-                  </Menu>
+            <Box style={{ position: 'absolute', top: -30, right: -30, width: 120, height: 120, borderRadius: '50%', background: 'rgba(255,255,255,0.06)' }} />
+            <Group justify="space-between" align="center" style={{ position: 'relative', zIndex: 1 }}>
+              <div>
+                <Group gap="sm" mb={4}>
+                  <IconSparkles size={18} style={{ color: 'rgba(255,255,255,0.7)' }} />
+                  <Text size="sm" fw={500} style={{ color: 'rgba(255,255,255,0.7)' }}>Grant Applications</Text>
                 </Group>
+                <Title order={2} c="white" fw={800}>My Applications</Title>
+                <Text size="sm" style={{ color: 'rgba(255,255,255,0.6)' }}>
+                  Track your submitted grant applications and their status
+                </Text>
+              </div>
+              <Button
+                leftSection={<IconPlus size={16} />}
+                style={{ backgroundColor: 'rgba(255,255,255,0.15)', color: 'white' }}
+                onClick={() => router.push('/dashboard/apply')}
+                size="md"
+                radius="md"
+              >
+                New Application
+              </Button>
+            </Group>
+          </Paper>
+        </MotionDiv>
 
-                <Text fw={600} size="lg" mb="xs">
-                  {app.businessName}
-                </Text>
-                <Text size="sm" c="dimmed" mb="xs">
-                  {app.applicationId}
-                </Text>
-                <Text size="sm" c="dimmed" mb="md">
-                  {app.businessType}
-                </Text>
-
-                <Text size="sm" mb="xs">
-                  <strong>Requested:</strong> ${Number(app.requestedAmount).toLocaleString()}
-                </Text>
-                {app.approvedAmount && (
-                  <Text size="sm" mb="xs" c="green">
-                    <strong>Approved:</strong> ${Number(app.approvedAmount).toLocaleString()}
-                  </Text>
-                )}
-
-                <Text size="xs" c="dimmed" mb="md">
-                  Applied: {formatDate(app.createdAt)}
-                </Text>
-
-                <Text size="sm" mb="md" lineClamp={2}>
-                  {app.purpose}
-                </Text>
-
-                <Button
-                  variant="light"
-                  fullWidth
+        {/* [WHY] Simplified application cards per user request — show only amount + status */}
+        {/* [WHAT] Each card shows: Application ID, amount (requested or approved), status badge */}
+        {applications.length > 0 ? (
+          <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }} spacing="lg">
+            {applications.map((app: Application, index: number) => (
+              <MotionDiv
+                key={app.id}
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.08 }}
+              >
+                <Card
+                  withBorder radius="lg" shadow="sm" p="xl" h="100%"
+                  style={{ cursor: 'pointer', transition: 'all 0.2s ease' }}
                   onClick={() => handleViewDetails(app)}
                 >
-                  View Details
+                  <Stack justify="space-between" h="100%" gap="md">
+                    {/* Top: Status badge + menu */}
+                    <Group justify="space-between">
+                      <Badge
+                        color={getStatusColor(app.status)}
+                        variant="light"
+                        size="lg"
+                        radius="sm"
+                      >
+                        {getStatusLabel(app.status)}
+                      </Badge>
+                      <Menu shadow="md" width={180}>
+                        <Menu.Target>
+                          <ActionIcon
+                            variant="subtle"
+                            color="gray"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <IconDots size={16} />
+                          </ActionIcon>
+                        </Menu.Target>
+                        <Menu.Dropdown>
+                          <Menu.Item
+                            leftSection={<IconEye size={14} />}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleViewDetails(app);
+                            }}
+                          >
+                            View Details
+                          </Menu.Item>
+                        </Menu.Dropdown>
+                      </Menu>
+                    </Group>
+
+                    {/* Center: Amount display — the primary focus */}
+                    <Stack align="center" gap={4} py="md">
+                      <ThemeIcon
+                        size={48}
+                        radius="xl"
+                        variant="light"
+                        color={app.approvedAmount ? 'green' : 'blue'}
+                      >
+                        <IconCurrencyDollar size={24} />
+                      </ThemeIcon>
+                      <Text size="xl" fw={800} c={app.approvedAmount ? 'green' : '#002e6d'}>
+                        ${Number(app.approvedAmount || app.requestedAmount || 0).toLocaleString()}
+                      </Text>
+                      <Text size="xs" c="dimmed" fw={500}>
+                        {app.approvedAmount ? 'Approved Amount' : 'Requested Amount'}
+                      </Text>
+                    </Stack>
+
+                    {/* Bottom: App ID */}
+                    <Divider />
+                    <Text size="xs" c="dimmed" ta="center" fw={500}>
+                      {app.applicationId}
+                    </Text>
+                  </Stack>
+                </Card>
+              </MotionDiv>
+            ))}
+          </SimpleGrid>
+        ) : (
+          <MotionDiv initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }}>
+            <Card withBorder radius="lg" shadow="sm" p="xl">
+              <Stack align="center" py="xl" gap="md">
+                <ThemeIcon size={64} radius="xl" variant="light" color="gray">
+                  <IconFileText size={32} />
+                </ThemeIcon>
+                <Text fw={600} size="lg" c="#002e6d">
+                  No applications yet
+                </Text>
+                <Text c="dimmed" ta="center" size="sm" maw={400}>
+                  Create your first grant application to get started with SBA funding.
+                </Text>
+                <Button
+                  onClick={() => router.push('/dashboard/apply')}
+                  style={{ backgroundColor: '#005ea2' }}
+                  leftSection={<IconPlus size={16} />}
+                  size="md"
+                >
+                  Create Application
                 </Button>
-              </Card>
-            </Grid.Col>
-          )) : (
-            <Grid.Col span={12}>
-              <Card withBorder radius="md" shadow="sm" p="xl">
-                <Text c="dimmed" ta="center" size="lg" mb="sm">
-                  No applications yet.
-                </Text>
-                <Text c="dimmed" ta="center" size="sm" mb="md">
-                  Create your first application to get started.
-                </Text>
-                <Group justify="center" mt="md">
-                  <Button
-                    onClick={() => router.push('/dashboard/apply')}
-                    style={{ backgroundColor: '#005ea2' }}
-                    leftSection={<IconPlus size={16} />}
-                  >
-                    Create Application
-                  </Button>
-                </Group>
-              </Card>
-            </Grid.Col>
-          )}
-        </Grid>
+              </Stack>
+            </Card>
+          </MotionDiv>
+        )}
 
         {/* Application Details Modal */}
         <ApplicationDetailsModal

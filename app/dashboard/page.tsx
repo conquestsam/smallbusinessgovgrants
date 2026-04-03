@@ -1,5 +1,10 @@
 'use client';
 
+// [SAFETY CHECKLIST]
+// - [ ] No existing test fails.
+// - [ ] No public interface changes unless approved.
+// - [ ] No new runtime exceptions possible.
+
 import { observer } from 'mobx-react-lite';
 import { useQuery } from '@tanstack/react-query';
 import {
@@ -94,7 +99,7 @@ const DashboardPage = observer(() => {
 
   const recentNotifications = (Array.isArray(notifications) ? notifications : []).slice(0, 3);
 
-  // Quick action feature cards
+  // [WHY] Quick action feature cards help users navigate to key sections
   const featureCards = [
     {
       icon: <IconChartBar size={24} />,
@@ -119,7 +124,7 @@ const DashboardPage = observer(() => {
     },
   ];
 
-  // Quick stats for the top stat strip
+  // [WHY] Quick stats provide at-a-glance financial overview
   const quickStats = [
     {
       label: 'Total Approved',
@@ -213,61 +218,11 @@ const DashboardPage = observer(() => {
           ))}
         </SimpleGrid>
 
+        {/* [WHY] Removed the profile sidebar (Debt ii) — replaced with cleaner 2-column layout */}
+        {/* [WHAT] Center column gets more space (md:7) for content, right column expands (md:5) */}
         <Grid gutter="lg">
-          {/* ── LEFT COLUMN: Profile Sidebar ── */}
-          <Grid.Col span={{ base: 12, md: 3 }}>
-            <MotionDiv initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2 }}>
-              <Card withBorder radius="md" shadow="sm" p={0}>
-                {/* Profile Header */}
-                <Box bg="#002e6d" p="lg" style={{ borderRadius: '8px 8px 0 0' }}>
-                  <Stack align="center" gap="sm">
-                    <Avatar size={80} radius={40} color="white" variant="filled">
-                      {authStore.user?.firstName?.[0]}{authStore.user?.lastName?.[0]}
-                    </Avatar>
-                    <Text fw={700} c="white" ta="center">
-                      {authStore.fullName}
-                    </Text>
-                    <Badge color="cyan" variant="light" size="xs">
-                      {authStore.user?.role?.toUpperCase()}
-                    </Badge>
-                  </Stack>
-                </Box>
-
-                {/* Profile Info Block */}
-                <Stack p="md" gap={0}>
-                  <Group justify="space-between" mb="sm">
-                    <Text size="xs" c="dimmed" fw={600} tt="uppercase">Contact Information</Text>
-                    <Anchor component={Link} href="/dashboard/profile" size="xs" c="#005ea2">
-                      <Group gap={4}>
-                        <IconEdit size={12} />
-                        Edit
-                      </Group>
-                    </Anchor>
-                  </Group>
-
-                  <Divider mb="sm" />
-
-                  {[
-                    { icon: <IconMail size={14} />, label: 'Email', value: authStore.user?.email },
-                    { icon: <IconPhone size={14} />, label: 'Phone', value: authStore.user?.phone || '—' },
-                  ].map((item, i) => (
-                    <Group key={i} gap="sm" py={8} style={{ borderBottom: '1px solid #f1f3f5' }}>
-                      <ThemeIcon size={24} variant="light" color="gray" radius="sm">
-                        {item.icon}
-                      </ThemeIcon>
-                      <div style={{ flex: 1 }}>
-                        <Text size="xs" c="dimmed">{item.label}</Text>
-                        <Text size="sm" fw={500} lineClamp={1}>{item.value}</Text>
-                      </div>
-                    </Group>
-                  ))}
-                </Stack>
-              </Card>
-            </MotionDiv>
-          </Grid.Col>
-
-          {/* ── CENTER COLUMN: Messages + Grants Table ── */}
-          <Grid.Col span={{ base: 12, md: 5 }}>
+          {/* ── LEFT COLUMN: Messages + Grants Table ── */}
+          <Grid.Col span={{ base: 12, md: 7 }}>
             <Stack gap="lg">
               {/* Messages / Notifications Section */}
               <MotionDiv initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
@@ -357,7 +312,7 @@ const DashboardPage = observer(() => {
                             <Table.Td>
                               <Menu shadow="md" position="bottom-end">
                                 <Menu.Target>
-                                  <ActionIcon variant="light" color="primary" radius="xl" size="sm">
+                                  <ActionIcon variant="light" color="blue" radius="xl" size="sm">
                                     <IconChevronDown size={14} />
                                   </ActionIcon>
                                 </Menu.Target>
@@ -388,7 +343,7 @@ const DashboardPage = observer(() => {
           </Grid.Col>
 
           {/* ── RIGHT COLUMN: How MySBA can work for you + Balance ── */}
-          <Grid.Col span={{ base: 12, md: 4 }}>
+          <Grid.Col span={{ base: 12, md: 5 }}>
             <MotionDiv initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.3 }}>
               <Card withBorder radius="md" shadow="sm" p="xl">
                 <Title order={4} c="#002e6d" mb="lg">How MySBA can work for you</Title>

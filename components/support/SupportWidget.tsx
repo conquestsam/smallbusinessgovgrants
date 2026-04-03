@@ -42,6 +42,19 @@ export const SupportWidget = () => {
     }
   };
 
+  // [WHY] Fix: Contact URLs stored in DB may lack protocol prefix (e.g. "wa.me/123")
+  // [WHAT] Without "https://", the browser treats it as a relative URL and prepends
+  //        the current page origin (e.g. "localhost:3000/wa.me/123") → 404 error
+  // [HOW] Check if URL starts with http:// or https:// or mailto: — if not, prepend https://
+  const ensureAbsoluteUrl = (url: string): string => {
+    if (!url) return '#';
+    // [WHY] mailto: and tel: are valid protocols that should not be prefixed
+    if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('mailto:') || url.startsWith('tel:')) {
+      return url;
+    }
+    return `https://${url}`;
+  };
+
   return (
     <Box 
         ref={clickOutsideRef}
@@ -76,7 +89,7 @@ export const SupportWidget = () => {
                   <UnstyledButton
                     key={contact.id}
                     component="a"
-                    href={contact.link}
+                    href={ensureAbsoluteUrl(contact.link)}
                     target="_blank"
                     p="xs"
                     style={(theme) => ({
