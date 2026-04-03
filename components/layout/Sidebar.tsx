@@ -37,7 +37,7 @@ const userMenuItems: MenuItem[] = [
   { label: 'Dashboard', icon: IconLayoutDashboard, href: '/dashboard' },
   { label: 'Application Status', icon: IconFileText, href: '/dashboard/applications' },
   { label: 'Create Application', icon: IconPlus, href: '/dashboard/apply' },
-  { label: 'Funding & Deposits', icon: IconCreditCard, href: '/dashboard/funding' },
+  { label: 'Make a Payment', icon: IconCreditCard, href: '/dashboard/funding' },
   // [WHY] New Transaction History page — unified view of all financial activity
   { label: 'Transaction History', icon: IconReceipt, href: '/dashboard/transactions' },
   { label: 'Withdrawal History', icon: IconHistory, href: '/dashboard/withdrawals' },
@@ -59,21 +59,21 @@ const adminMenuItems: MenuItem[] = [
 export const Sidebar = observer(({ onItemClick }: SidebarProps) => {
   const router = useRouter();
   const pathname = usePathname();
-  
+
   // NEW: Fetch pending counts for admin badges
   const { data: pendingCounts } = useQuery({
     queryKey: ['pending-counts'],
     queryFn: async () => {
       if (!authStore.isAdmin) return { applications: 0, withdrawals: 0 };
-      
+
       const [appsRes, withdrawalsRes] = await Promise.all([
         fetch('/api/admin/applications'),
         fetch('/api/admin/withdrawals')
       ]);
-      
+
       const apps = await appsRes.json();
       const withdrawals = await withdrawalsRes.json();
-      
+
       return {
         applications: apps.filter((app: any) => app.status === 'pending').length,
         withdrawals: withdrawals.filter((w: any) => w.status === 'pending').length,
@@ -82,15 +82,15 @@ export const Sidebar = observer(({ onItemClick }: SidebarProps) => {
     enabled: authStore.isAdmin,
     refetchInterval: 30000, // Refresh every 30 seconds
   });
-  
+
   // CHANGED: Add dynamic badges to admin menu items with proper typing
-  const menuItems: MenuItem[] = authStore.isAdmin 
+  const menuItems: MenuItem[] = authStore.isAdmin
     ? adminMenuItems.map(item => ({
-        ...item,
-        badge: item.href === '/admin/applications' ? pendingCounts?.applications?.toString() :
-               item.href === '/admin/withdrawals' ? pendingCounts?.withdrawals?.toString() :
-               undefined
-      })) 
+      ...item,
+      badge: item.href === '/admin/applications' ? pendingCounts?.applications?.toString() :
+        item.href === '/admin/withdrawals' ? pendingCounts?.withdrawals?.toString() :
+          undefined
+    }))
     : userMenuItems;
 
   const handleItemClick = (href: string) => {
@@ -106,7 +106,7 @@ export const Sidebar = observer(({ onItemClick }: SidebarProps) => {
       <Text size="xs" c="dimmed" fw={500} tt="uppercase" mb="md">
         {authStore.isAdmin ? 'Admin Panel' : 'My Dashboard'}
       </Text>
-      
+
       {menuItems.map((item) => (
         <NavLink
           key={item.href}
