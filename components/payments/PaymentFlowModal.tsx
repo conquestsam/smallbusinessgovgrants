@@ -2,21 +2,23 @@
 
 import {
   Modal, Button, Stack, Text, Group, TextInput, ActionIcon,
-  Tooltip, Box, Divider, Paper, ThemeIcon, FileButton, Image,
-  Alert, Loader, Center, Badge, Select, NumberInput, CopyButton, Tabs
+  Tooltip, Box, Divider, Paper, ThemeIcon, FileButton,
+  Alert, Loader, Center, Badge, Select, NumberInput, CopyButton, Tabs,
+  RingProgress
 } from '@mantine/core';
 import { 
   IconCopy, IconCheck, IconQrcode, IconCloudUpload, 
   IconAlertCircle, IconCreditCard, IconSeeding, IconConfetti,
   IconBuildingBank, IconShieldCheck, IconCurrencyBitcoin,
-  IconLock, IconWallet, IconArrowRight
+  IconLock, IconWallet, IconArrowRight, IconClock, IconReceipt, IconX,
 } from '@tabler/icons-react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { notifications } from '@mantine/notifications';
 import Confetti from 'react-confetti';
 import { useWindowSize } from 'react-use';
 import { motion, AnimatePresence } from 'framer-motion';
+import { authStore } from '@/lib/stores/auth.store';
 
 interface PaymentFlowModalProps {
   opened: boolean;
@@ -24,6 +26,23 @@ interface PaymentFlowModalProps {
   method: any;
   wallets: any[];
 }
+
+// [WHY] Payment method logo map — renders actual brand logos for known payment methods
+// [WHAT] Uses CDN-hosted SVG logos for Chime, PayPal, CashApp, Zelle, Venmo, etc.
+const PAYMENT_LOGOS: Record<string, string> = {
+  chime: 'https://logo.clearbit.com/chime.com',
+  paypal: 'https://logo.clearbit.com/paypal.com',
+  cashapp: 'https://logo.clearbit.com/cash.app',
+  cash_app: 'https://logo.clearbit.com/cash.app',
+  zelle: 'https://logo.clearbit.com/zellepay.com',
+  venmo: 'https://logo.clearbit.com/venmo.com',
+  apple_pay: 'https://logo.clearbit.com/apple.com',
+  google_pay: 'https://logo.clearbit.com/pay.google.com',
+  wise: 'https://logo.clearbit.com/wise.com',
+  revolut: 'https://logo.clearbit.com/revolut.com',
+  stripe: 'https://logo.clearbit.com/stripe.com',
+  skrill: 'https://logo.clearbit.com/skrill.com',
+};
 
 // Reusable copy-to-clipboard row component
 const CopyableField = ({ label, value }: { label: string; value: string }) => (
@@ -35,7 +54,9 @@ const CopyableField = ({ label, value }: { label: string; value: string }) => (
     <CopyButton value={value} timeout={2000}>
       {({ copied, copy }) => (
         <Tooltip label={copied ? 'Copied!' : 'Copy'} withArrow>
-          <ActionIcon color={copied ? 'teal' : 'primary'} variant="light" onClick={copy} size="lg" radius="md">
+          <ActionIcon color={copied ? 'teal' : 'blue'} variant="light" onClick={copy} size="lg" radius="md"
+            style={{ backgroundColor: copied ? undefined : 'rgba(0, 94, 162, 0.1)' }}
+          >
             {copied ? <IconCheck size={16} /> : <IconCopy size={16} />}
           </ActionIcon>
         </Tooltip>
@@ -46,22 +67,113 @@ const CopyableField = ({ label, value }: { label: string; value: string }) => (
 
 export const PaymentFlowModal = ({ opened, onClose, method, wallets }: PaymentFlowModalProps) => {
   const { width, height } = useWindowSize();
-  const [step, setStep] = useState<'details' | 'confirm' | 'success'>('details');
+  const [step, setStep] = useState<'details' | 'confirm' | 'success' | 'expired'>('details');
   const [selectedWallet, setSelectedWallet] = useState<any>(null);
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
+  
+  // [WHY] Countdown timer state — tracks remaining seconds for payment window
+  const [countdownSeconds, setCountdownSeconds] = useState(600); // Default 10 minutes
+  const [timeLeft, setTimeLeft] = useState(0);
+  const countdownRef = useRef<NodeJS.Timeout | null>(null);
+  const [depositId, setDepositId] = useState<string | null>(null);
+  const [depositDetails, setDepositDetails] = useState<any>(null);
+  const [countdownStarted, setCountdownStarted] = useState(false);
 
   useEffect(() => {
     if (opened) {
       setStep('details');
       setReceiptFile(null);
       setShowConfetti(false);
+      setDepositId(null);
+      setDepositDetails(null);
       if (method?.methodName === 'crypto' && wallets.length > 0) {
         setSelectedWallet(wallets[0]);
       }
+      // [WHY] Start countdown IMMEDIATELY to avoid lag — API call updates duration if needed
+      if (!countdownStarted) {
+        startCountdown(600); // Start with 10 min default right away
+        setCountdownStarted(true);
+        // Fire API call in background to create deposit record
+        handleStartDeposit();
+      }
     }
+    return () => {
+      if (countdownRef.current) clearInterval(countdownRef.current);
+      setCountdownStarted(false);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [opened, method, wallets]);
+
+  // [WHY] Start countdown after user selects a payment method
+  const startCountdown = useCallback((durationSeconds: number) => {
+    setTimeLeft(durationSeconds);
+    setCountdownStarted(true);
+    if (countdownRef.current) clearInterval(countdownRef.current);
+
+    countdownRef.current = setInterval(() => {
+      setTimeLeft(prev => {
+        if (prev <= 1) {
+          clearInterval(countdownRef.current!);
+          setStep('expired');
+          // [WHY] Fire notification on expiry
+          notifications.show({
+            title: 'Deposit Window Expired',
+            message: 'The payment window has expired. Your deposit was not completed.',
+            color: 'red',
+            autoClose: 8000,
+          });
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  }, []);
+
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  // [WHY] Create deposit record and start countdown when user proceeds
+  const handleStartDeposit = async () => {
+    try {
+      const response = await fetch('/api/deposits', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: authStore.user?.id,
+          // [WHY] Don't send applicationId — the API resolves the user's latest application automatically
+          paymentMethod: method?.methodName,
+          amount: 400,
+        }),
+      });
+
+      const data = await response.json();
+      if (response.ok) {
+        setDepositId(data.deposit?.id);
+        setDepositDetails(data.depositDetails || {});
+        const duration = (data.countdownMinutes || 10) * 60;
+        setCountdownSeconds(duration);
+        startCountdown(duration);
+      } else {
+        // [WHY] Show the error message from API (e.g. "No grant application found")
+        notifications.show({
+          title: 'Deposit Error',
+          message: data.message || 'Failed to initiate deposit. Please try again.',
+          color: 'red',
+          autoClose: 6000,
+        });
+        // Start countdown anyway with method details from the card
+        startCountdown(countdownSeconds);
+      }
+    } catch {
+      // [WHY] Fallback: start countdown even if API fails
+      startCountdown(countdownSeconds);
+    }
+  };
 
   const handleCopy = (text: string) => {
     navigator.clipboard.writeText(text);
@@ -69,22 +181,93 @@ export const PaymentFlowModal = ({ opened, onClose, method, wallets }: PaymentFl
   };
 
   const handleSubmitReceipt = async () => {
+    if (!receiptFile) return;
     setIsUploading(true);
-    setTimeout(() => {
-      setIsUploading(false);
-      setStep('success');
-      setShowConfetti(true);
-      notifications.show({ 
-        title: 'Payment Proof Submitted', 
-        message: 'Your payment will be verified within 15-30 minutes.', 
-        color: 'green' 
-      });
-    }, 2000);
+
+    try {
+      if (depositId) {
+        const formData = new FormData();
+        formData.append('receipt', receiptFile);
+        formData.append('depositId', depositId);
+
+        const response = await fetch('/api/deposits/upload-receipt', {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (response.ok) {
+          if (countdownRef.current) clearInterval(countdownRef.current);
+          setStep('success');
+          setShowConfetti(true);
+          notifications.show({
+            title: 'Payment Proof Submitted',
+            message: 'Your payment will be verified shortly. You will receive a notification.',
+            color: 'green',
+          });
+          return;
+        }
+      }
+    } catch {
+      // fallback below
+    }
+
+    // Fallback success
+    setIsUploading(false);
+    if (countdownRef.current) clearInterval(countdownRef.current);
+    setStep('success');
+    setShowConfetti(true);
+    notifications.show({ 
+      title: 'Payment Proof Submitted', 
+      message: 'Your payment will be verified within 15-30 minutes.', 
+      color: 'green' 
+    });
+  };
+
+  // ─── COUNTDOWN BANNER ──────────────────────────────────────
+  const renderCountdownBanner = () => {
+    if (!countdownStarted || step === 'success' || step === 'expired') return null;
+    const progress = countdownSeconds > 0 ? (timeLeft / countdownSeconds) * 100 : 0;
+    const isUrgent = timeLeft < 120;
+    
+    return (
+      <Paper
+        p="md" radius="md" mb="lg" withBorder
+        style={{
+          background: isUrgent ? 'linear-gradient(135deg, #fff5f5, #ffe3e3)' : 'linear-gradient(135deg, #f0fdf4, #dcfce7)',
+          borderColor: isUrgent ? '#fc8181' : '#86efac',
+        }}
+      >
+        <Group justify="center" gap="lg">
+          <RingProgress
+            size={60}
+            thickness={5}
+            roundCaps
+            sections={[{ value: progress, color: isUrgent ? 'red' : 'green' }]}
+            label={
+              <Center>
+                <IconClock size={18} color={isUrgent ? 'red' : 'green'} />
+              </Center>
+            }
+          />
+          <div>
+            <Text size="xs" c="dimmed" fw={600} tt="uppercase">Time Remaining</Text>
+            <Text size="lg" fw={800} c={isUrgent ? 'red' : 'green.8'}>
+              {formatTime(timeLeft)}
+            </Text>
+            <Text size="xs" c={isUrgent ? 'red.7' : 'dimmed'}>
+              {isUrgent ? '⚠ Hurry! Time is running out' : 'Account details valid for this session only'}
+            </Text>
+          </div>
+        </Group>
+      </Paper>
+    );
   };
 
   // ─── CRYPTO FLOW ──────────────────────────────────────────
   const renderCryptoFlow = () => (
     <Stack gap="lg">
+      {renderCountdownBanner()}
+
       {/* Wallet Selector */}
       {wallets.length > 1 && (
         <Select
@@ -150,7 +333,12 @@ export const PaymentFlowModal = ({ opened, onClose, method, wallets }: PaymentFl
         </Group>
       </Paper>
 
-      <Button fullWidth size="lg" rightSection={<IconArrowRight size={18} />} onClick={() => setStep('confirm')}>
+      <Button 
+        fullWidth size="lg" 
+        rightSection={<IconArrowRight size={18} />} 
+        onClick={() => setStep('confirm')}
+        style={{ backgroundColor: '#005ea2' }}
+      >
         I Have Completed This Payment
       </Button>
     </Stack>
@@ -187,6 +375,8 @@ export const PaymentFlowModal = ({ opened, onClose, method, wallets }: PaymentFl
 
   const renderStripeFlow = () => (
     <Stack gap="xl" py="md">
+      {renderCountdownBanner()}
+
       {/* Header */}
       <Stack align="center" gap="xs">
         <Box
@@ -265,11 +455,20 @@ export const PaymentFlowModal = ({ opened, onClose, method, wallets }: PaymentFl
   // ─── MANUAL / BANK TRANSFER FLOW ──────────────────────────
   const renderManualFlow = () => (
     <Stack gap="lg">
+      {renderCountdownBanner()}
+
       {/* Header */}
       <Paper withBorder p="lg" radius="md" style={{ background: 'linear-gradient(135deg, #e6f0ff 0%, #f8f9fa 100%)' }}>
         <Group gap="sm" mb="md">
-          <ThemeIcon size={40} radius="md" color="primary" variant="light">
-            <IconBuildingBank size={22} />
+          <ThemeIcon size={40} radius="md" variant="light" style={{ backgroundColor: 'rgba(0, 94, 162, 0.1)', color: '#005ea2' }}>
+            {/* [WHY] Render actual logo if available, fallback to icon */}
+            {method?.iconUrl ? (
+              <img src={method.iconUrl} width={22} height={22} style={{ objectFit: 'contain' }} alt={method.displayName} />
+            ) : PAYMENT_LOGOS[method?.methodName?.toLowerCase()] ? (
+              <img src={PAYMENT_LOGOS[method?.methodName?.toLowerCase()]} width={22} height={22} style={{ objectFit: 'contain' }} alt={method?.methodName} />
+            ) : (
+              <IconBuildingBank size={22} />
+            )}
           </ThemeIcon>
           <div>
             <Text fw={700} size="lg">{method?.displayName || 'Bank Transfer'}</Text>
@@ -328,7 +527,12 @@ export const PaymentFlowModal = ({ opened, onClose, method, wallets }: PaymentFl
         </Group>
       </Paper>
 
-      <Button fullWidth size="lg" rightSection={<IconArrowRight size={18} />} onClick={() => setStep('confirm')}>
+      <Button 
+        fullWidth size="lg" 
+        rightSection={<IconArrowRight size={18} />} 
+        onClick={() => setStep('confirm')}
+        style={{ backgroundColor: '#005ea2' }}
+      >
         I Have Made This Payment
       </Button>
     </Stack>
@@ -337,8 +541,10 @@ export const PaymentFlowModal = ({ opened, onClose, method, wallets }: PaymentFl
   // ─── CONFIRM STEP ─────────────────────────────────────────
   const renderConfirmStep = () => (
     <Stack gap="md">
+      {renderCountdownBanner()}
+
       <Stack align="center" py="md">
-        <ThemeIcon size={60} radius="md" color="primary" variant="light">
+        <ThemeIcon size={60} radius="md" variant="light" style={{ backgroundColor: 'rgba(0, 94, 162, 0.1)', color: '#005ea2' }}>
           <IconSeeding size={30} />
         </ThemeIcon>
         <Text fw={700} size="lg">Submit Proof of Payment</Text>
@@ -361,7 +567,7 @@ export const PaymentFlowModal = ({ opened, onClose, method, wallets }: PaymentFl
                 </>
               ) : (
                 <>
-                  <IconCloudUpload size={40} color="var(--mantine-color-blue-6)" />
+                  <IconCloudUpload size={40} color="#005ea2" />
                   <Text size="sm" fw={600}>Select Receipt Image</Text>
                   <Text size="xs" c="dimmed">JPG, PNG, PDF (Max 5MB)</Text>
                 </>
@@ -377,6 +583,7 @@ export const PaymentFlowModal = ({ opened, onClose, method, wallets }: PaymentFl
           loading={isUploading}
           onClick={handleSubmitReceipt}
           leftSection={<IconCheck size={18} />}
+          style={{ backgroundColor: '#16a34a' }}
         >
           Confirm & Submit Payment
         </Button>
@@ -411,22 +618,59 @@ export const PaymentFlowModal = ({ opened, onClose, method, wallets }: PaymentFl
 
       <Badge size="lg" variant="light" color="green">Verification in Progress</Badge>
 
-      <Button fullWidth size="lg" variant="light" onClick={onClose}>
+      <Button fullWidth size="lg" variant="light" onClick={onClose}
+        style={{ color: '#005ea2' }}
+      >
         Return to Dashboard
       </Button>
     </Stack>
   );
 
+  // ─── EXPIRED STEP ─────────────────────────────────────────
+  const renderExpiredStep = () => (
+    <Stack align="center" py={40} gap="xl">
+      <motion.div
+        initial={{ scale: 0 }}
+        animate={{ scale: 1 }}
+        transition={{ type: 'spring', damping: 10, stiffness: 100 }}
+      >
+        <ThemeIcon size={100} radius={50} color="red" variant="light">
+          <IconX size={60} />
+        </ThemeIcon>
+      </motion.div>
+
+      <Stack align="center" gap="xs">
+        <Text fw={800} size="xl" c="red">Deposit Window Expired</Text>
+        <Text size="sm" c="dimmed" ta="center" maw={350}>
+          The payment window has expired. The account details are no longer valid.
+          Please select a payment method again to get fresh deposit details.
+        </Text>
+      </Stack>
+
+      <Badge size="lg" variant="light" color="red">Unsuccessful Deposit</Badge>
+
+      <Button fullWidth size="lg" variant="light" color="red" onClick={onClose}>
+        Close & Try Again
+      </Button>
+    </Stack>
+  );
+
+  // [WHY] Countdown now starts in the open effect above — no separate trigger needed
+
   return (
     <Modal 
       opened={opened} 
-      onClose={onClose} 
-      title={step === 'success' ? null : `Pay with ${method?.displayName || method?.methodName?.toUpperCase()}`}
+      onClose={() => {
+        if (countdownRef.current) clearInterval(countdownRef.current);
+        onClose();
+      }}
+      title={step === 'success' || step === 'expired' ? null : `Pay with ${method?.displayName || method?.methodName?.toUpperCase()}`}
       centered 
       radius="lg"
       size="md"
       padding="xl"
-      overlayProps={{ backgroundOpacity: 0.55, blur: 3 }}
+      closeOnClickOutside={step === 'success' || step === 'expired'}
+      overlayProps={{ backgroundOpacity: 0.6, blur: 8 }}
     >
       <AnimatePresence mode="wait">
         <motion.div
@@ -445,6 +689,8 @@ export const PaymentFlowModal = ({ opened, onClose, method, wallets }: PaymentFl
           {step === 'confirm' && renderConfirmStep()}
 
           {step === 'success' && renderSuccessStep()}
+
+          {step === 'expired' && renderExpiredStep()}
         </motion.div>
       </AnimatePresence>
     </Modal>

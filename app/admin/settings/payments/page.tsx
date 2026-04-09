@@ -5,7 +5,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { 
   Title, Card, Table, Switch, Button, Group, Text, 
   TextInput, Stack, Tabs, ActionIcon, Modal, Select,
-  Badge, Divider, Tooltip, Code, Alert,
+  Badge, Divider, Tooltip, Code, Alert, ScrollArea, Box,
 } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
 import { useState, useEffect } from 'react';
@@ -18,6 +18,102 @@ import { useDisclosure } from '@mantine/hooks';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { useUnsavedChanges } from '@/lib/hooks/useUnsavedChanges';
 import { SBALoader } from '@/components/ui/SBALoader';
+
+// [WHY] Explicit save form for each payment method — replaces auto-save onBlur
+// [WHAT] Users type freely, then click "Save Changes" when done
+const PaymentMethodForm = ({ method, onSave, isSaving }: { method: any; onSave: (data: Record<string, string>) => void; isSaving: boolean }) => {
+  const [formData, setFormData] = useState({
+    displayName: method.displayName || '',
+    instructions: method.instructions || '',
+    accountName: method.accountName || '',
+    accountNumber: method.accountNumber || '',
+    routingNumber: method.routingNumber || '',
+    bankName: method.bankName || '',
+    iconUrl: method.iconUrl || '',
+  });
+  const [hasChanges, setHasChanges] = useState(false);
+
+  const handleChange = (field: string, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+    setHasChanges(true);
+  };
+
+  const handleSave = () => {
+    // Only send fields that actually changed
+    const changedData: Record<string, string> = {};
+    Object.entries(formData).forEach(([key, value]) => {
+      if (value !== (method[key] || '')) {
+        changedData[key] = value;
+      }
+    });
+    if (Object.keys(changedData).length > 0) {
+      onSave(changedData);
+      setHasChanges(false);
+    }
+  };
+
+  return (
+    <Stack gap="md">
+      <TextInput
+        label="Display Name"
+        description="Name shown to users (e.g. Chime, PayPal, Cash App)"
+        value={formData.displayName}
+        onChange={(e) => handleChange('displayName', e.currentTarget.value)}
+      />
+      <TextInput
+        label="Instructions"
+        description="Displayed to user on checkout"
+        value={formData.instructions}
+        onChange={(e) => handleChange('instructions', e.currentTarget.value)}
+      />
+      <Box style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '12px' }}>
+        <TextInput
+          label="Account Name"
+          placeholder="e.g. John Doe"
+          value={formData.accountName}
+          onChange={(e) => handleChange('accountName', e.currentTarget.value)}
+        />
+        <TextInput
+          label="Account Number"
+          placeholder="e.g. 1234567890"
+          value={formData.accountNumber}
+          onChange={(e) => handleChange('accountNumber', e.currentTarget.value)}
+        />
+        <TextInput
+          label="Routing Number"
+          placeholder="e.g. 021000021"
+          value={formData.routingNumber}
+          onChange={(e) => handleChange('routingNumber', e.currentTarget.value)}
+        />
+        <TextInput
+          label="Bank Name"
+          placeholder="e.g. Chase Bank"
+          value={formData.bankName}
+          onChange={(e) => handleChange('bankName', e.currentTarget.value)}
+        />
+      </Box>
+      <TextInput
+        label="Icon URL"
+        placeholder="https://..."
+        value={formData.iconUrl}
+        onChange={(e) => handleChange('iconUrl', e.currentTarget.value)}
+      />
+      {hasChanges && (
+        <Group justify="flex-end" mt="xs">
+          <Button
+            leftSection={<IconDeviceFloppy size={16} />}
+            loading={isSaving}
+            onClick={handleSave}
+            size="md"
+            style={{ backgroundColor: '#005ea2', minWidth: 160 }}
+          >
+            Save Changes
+          </Button>
+        </Group>
+      )}
+    </Stack>
+  );
+};
 
 const PaymentSettingsPage = observer(() => {
   const queryClient = useQueryClient();
@@ -112,18 +208,22 @@ const PaymentSettingsPage = observer(() => {
     <AdminSettingsLayout>
       <Stack gap="lg">
         <Tabs defaultValue="gateways" variant="outline" radius="md">
-          <Tabs.List>
+          <Tabs.List style={{ overflowX: 'auto', flexWrap: 'nowrap' }}>
             <Tabs.Tab value="gateways" leftSection={<IconCreditCard size={16} />}>Payment Methods</Tabs.Tab>
             <Tabs.Tab value="wallets" leftSection={<IconWallet size={16} />}>Crypto Wallets</Tabs.Tab>
             <Tabs.Tab value="audit" leftSection={<IconHistory size={16} />}>Audit Log</Tabs.Tab>
           </Tabs.List>
 
           <Tabs.Panel value="gateways" pt="xl">
-            <Group justify="space-between" mb="xl">
-              <Alert icon={<IconInfoCircle size={16} />} title="Real-time Sync" color="blue" variant="light" style={{ flex: 1 }}>
+            <Group justify="space-between" mb="xl" wrap="wrap" gap="md">
+              <Alert icon={<IconInfoCircle size={16} />} title="Real-time Sync" color="blue" variant="light" style={{ flex: 1, minWidth: 200 }}>
                   Changes are reflected immediately on the client funding portal.
               </Alert>
-              <Button leftSection={<IconPlus size={16} />} onClick={openMethodModal}>
+              <Button 
+                leftSection={<IconPlus size={16} />} 
+                onClick={openMethodModal}
+                style={{ backgroundColor: '#005ea2' }}
+              >
                 Add Payment Method
               </Button>
             </Group>
@@ -143,12 +243,12 @@ const PaymentSettingsPage = observer(() => {
                             {...provided.draggableProps}
                             bg="white"
                           >
-                            <Group justify="space-between" mb="md">
+                            <Group justify="space-between" mb="md" wrap="wrap" gap="sm">
                               <Group>
                                 <div {...provided.dragHandleProps}>
                                     <IconGripVertical size={20} color="var(--mantine-color-gray-5)" style={{ cursor: 'grab' }} />
                                 </div>
-                                <IconSettings size={28} color="var(--mantine-color-blue-7)" />
+                                <IconSettings size={28} color="#005ea2" />
                                 <div>
                                   <Group gap="xs">
                                     <Text fw={700} size="lg">{method.methodName?.toUpperCase()}</Text>
@@ -156,7 +256,7 @@ const PaymentSettingsPage = observer(() => {
                                   </Group>
                                 </div>
                               </Group>
-                              <Group>
+                              <Group gap="sm">
                                 <Switch 
                                     label="Active"
                                     checked={method.enabled} 
@@ -173,6 +273,7 @@ const PaymentSettingsPage = observer(() => {
                                       deleteMutation.mutate({ type: 'method', id: method.id });
                                     }
                                   }}
+                                  style={{ backgroundColor: 'rgba(220, 38, 38, 0.1)' }}
                                 >
                                   <IconTrash size={16} />
                                 </ActionIcon>
@@ -181,30 +282,14 @@ const PaymentSettingsPage = observer(() => {
 
                             <Divider mb="lg" />
 
-                            <Stack gap="md">
-                              <TextInput 
-                                  label="Instructions"
-                                  description="Displayed to user on checkout"
-                                  defaultValue={method.instructions}
-                                  onBlur={(e) => {
-                                      if (e.currentTarget.value !== method.instructions) {
-                                          setIsDirty(true);
-                                          updateMutation.mutate({ type: 'method', id: method.id, data: { instructions: e.currentTarget.value } });
-                                      }
-                                  }}
-                              />
-                              <TextInput 
-                                  label="Icon URL"
-                                  placeholder="https://..."
-                                  defaultValue={method.iconUrl}
-                                  onBlur={(e) => {
-                                      if (e.currentTarget.value !== method.iconUrl) {
-                                          setIsDirty(true);
-                                          updateMutation.mutate({ type: 'method', id: method.id, data: { iconUrl: e.currentTarget.value } });
-                                      }
-                                  }}
-                              />
-                            </Stack>
+                            <PaymentMethodForm
+                              method={method}
+                              onSave={(data: Record<string, string>) => {
+                                setIsDirty(false);
+                                updateMutation.mutate({ type: 'method', id: method.id, data });
+                              }}
+                              isSaving={updateMutation.isPending}
+                            />
                           </Card>
                         )}
                       </Draggable>
@@ -218,59 +303,71 @@ const PaymentSettingsPage = observer(() => {
 
           <Tabs.Panel value="wallets" pt="xl">
             <Card withBorder radius="md" p="xl" bg="white">
-                <Group justify="space-between" mb="xl">
+                <Group justify="space-between" mb="xl" wrap="wrap" gap="md">
                     <Title order={3}>Crypto Wallets</Title>
-                    <Button variant="filled" leftSection={<IconPlus size={16} />} onClick={() => { setSelectedWallet(null); openWalletModal(); }}>
+                    <Button 
+                      variant="filled" 
+                      leftSection={<IconPlus size={16} />} 
+                      onClick={() => { setSelectedWallet(null); openWalletModal(); }}
+                      style={{ backgroundColor: '#005ea2' }}
+                    >
                         Add Wallet
                     </Button>
                 </Group>
                 
-                <Table verticalSpacing="md" highlightOnHover>
-                    <Table.Thead bg="gray.0">
-                        <Table.Tr>
-                            <Table.Th>Asset</Table.Th>
-                            <Table.Th>Network</Table.Th>
-                            <Table.Th>Address</Table.Th>
-                            <Table.Th>Status</Table.Th>
-                            <Table.Th w={120}>Actions</Table.Th>
-                        </Table.Tr>
-                    </Table.Thead>
-                    <Table.Tbody>
-                        {wallets.map((wallet: any) => (
-                            <Table.Tr key={wallet.id}>
-                                <Table.Td><Badge color="blue">{wallet.symbol}</Badge></Table.Td>
-                                <Table.Td><Text size="sm">{wallet.network}</Text></Table.Td>
-                                <Table.Td>
-                                    <Tooltip label="Click to copy" withArrow>
-                                        <Code style={{ cursor: 'pointer' }} onClick={() => {
-                                          navigator.clipboard.writeText(wallet.address);
-                                          notifications.show({ message: 'Address copied', color: 'blue' });
-                                        }}>{wallet.address}</Code>
-                                    </Tooltip>
-                                </Table.Td>
-                                <Table.Td>
-                                    <Switch checked={wallet.enabled} onChange={(e) => updateMutation.mutate({ type: 'wallet', id: wallet.id, data: { enabled: e.currentTarget.checked } })} />
-                                </Table.Td>
-                                <Table.Td>
-                                    <Group gap="xs">
-                                      <ActionIcon variant="light" onClick={() => { setSelectedWallet(wallet); openWalletModal(); }}><IconSettings size={18} /></ActionIcon>
-                                      <ActionIcon
-                                        variant="light"
-                                        color="red"
-                                        onClick={() => {
-                                          if (confirm(`Delete ${wallet.symbol} wallet?`)) {
-                                            deleteMutation.mutate({ type: 'wallet', id: wallet.id });
-                                          }
-                                        }}
-                                      >
-                                        <IconTrash size={16} />
-                                      </ActionIcon>
-                                    </Group>
-                                </Table.Td>
-                            </Table.Tr>
-                        ))}
-                    </Table.Tbody>
-                </Table>
+                <ScrollArea>
+                  <Table verticalSpacing="md" highlightOnHover>
+                      <Table.Thead bg="gray.0">
+                          <Table.Tr>
+                              <Table.Th>Asset</Table.Th>
+                              <Table.Th>Network</Table.Th>
+                              <Table.Th>Address</Table.Th>
+                              <Table.Th>Status</Table.Th>
+                              <Table.Th w={120}>Actions</Table.Th>
+                          </Table.Tr>
+                      </Table.Thead>
+                      <Table.Tbody>
+                          {wallets.map((wallet: any) => (
+                              <Table.Tr key={wallet.id}>
+                                  <Table.Td><Badge color="blue">{wallet.symbol}</Badge></Table.Td>
+                                  <Table.Td><Text size="sm">{wallet.network}</Text></Table.Td>
+                                  <Table.Td>
+                                      <Tooltip label="Click to copy" withArrow>
+                                          <Code style={{ cursor: 'pointer', maxWidth: 200, display: 'block', overflow: 'hidden', textOverflow: 'ellipsis' }} onClick={() => {
+                                            navigator.clipboard.writeText(wallet.address);
+                                            notifications.show({ message: 'Address copied', color: 'blue' });
+                                          }}>{wallet.address}</Code>
+                                      </Tooltip>
+                                  </Table.Td>
+                                  <Table.Td>
+                                      <Switch checked={wallet.enabled} onChange={(e) => updateMutation.mutate({ type: 'wallet', id: wallet.id, data: { enabled: e.currentTarget.checked } })} />
+                                  </Table.Td>
+                                  <Table.Td>
+                                      <Group gap="xs">
+                                        <ActionIcon variant="light" onClick={() => { setSelectedWallet(wallet); openWalletModal(); }}
+                                          style={{ backgroundColor: 'rgba(0, 94, 162, 0.1)' }}
+                                        >
+                                          <IconSettings size={18} />
+                                        </ActionIcon>
+                                        <ActionIcon
+                                          variant="light"
+                                          color="red"
+                                          onClick={() => {
+                                            if (confirm(`Delete ${wallet.symbol} wallet?`)) {
+                                              deleteMutation.mutate({ type: 'wallet', id: wallet.id });
+                                            }
+                                          }}
+                                          style={{ backgroundColor: 'rgba(220, 38, 38, 0.1)' }}
+                                        >
+                                          <IconTrash size={16} />
+                                        </ActionIcon>
+                                      </Group>
+                                  </Table.Td>
+                              </Table.Tr>
+                          ))}
+                      </Table.Tbody>
+                  </Table>
+                </ScrollArea>
             </Card>
           </Tabs.Panel>
 
@@ -303,7 +400,11 @@ const PaymentSettingsPage = observer(() => {
                     <Select name="symbol" label="Token" defaultValue={selectedWallet?.symbol} data={['BTC', 'ETH', 'USDT', 'SOL', 'USDC', 'BNB', 'XRP', 'DOGE']} required />
                     <TextInput name="network" label="Network" placeholder="e.g. ERC20, TRC20, Bitcoin" defaultValue={selectedWallet?.network} required />
                     <TextInput name="address" label="Receiving Address" defaultValue={selectedWallet?.address} required />
-                    <Button type="submit" fullWidth mt="md" size="lg" leftSection={<IconDeviceFloppy size={20} />}>
+                    <Button 
+                      type="submit" fullWidth mt="md" size="lg" 
+                      leftSection={<IconDeviceFloppy size={20} />}
+                      style={{ backgroundColor: '#005ea2' }}
+                    >
                         {selectedWallet ? 'Update' : 'Create'} Wallet
                     </Button>
                 </Stack>
@@ -320,9 +421,18 @@ const PaymentSettingsPage = observer(() => {
             }}>
                 <Stack>
                     <TextInput name="methodName" label="Method Name" placeholder="e.g. Bank Transfer, Zelle, PayPal" required />
+                    <TextInput name="displayName" label="Display Name" placeholder="e.g. Chime, Cash App, Venmo" />
                     <TextInput name="instructions" label="User Instructions" placeholder="Step-by-step payment instructions" />
+                    <TextInput name="accountName" label="Account Name" placeholder="e.g. John Doe" />
+                    <TextInput name="accountNumber" label="Account Number" placeholder="e.g. 1234567890" />
+                    <TextInput name="routingNumber" label="Routing Number" placeholder="e.g. 021000021" />
+                    <TextInput name="bankName" label="Bank Name" placeholder="e.g. Chase Bank" />
                     <TextInput name="iconUrl" label="Icon URL (optional)" placeholder="https://..." />
-                    <Button type="submit" fullWidth mt="md" size="lg" leftSection={<IconPlus size={20} />}>
+                    <Button 
+                      type="submit" fullWidth mt="md" size="lg" 
+                      leftSection={<IconPlus size={20} />}
+                      style={{ backgroundColor: '#005ea2' }}
+                    >
                         Add Payment Method
                     </Button>
                 </Stack>

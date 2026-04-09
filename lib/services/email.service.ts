@@ -912,6 +912,109 @@ static async sendNewsletter(to: string, name: string, subject: string, content: 
     `
   }
 
+  // Deposit Status Email — notifies user when their deposit is approved or rejected
+  static async sendDepositStatusEmail(data: {
+    name: string;
+    email: string;
+    depositAmount: number;
+    paymentMethod: string;
+    status: 'approved' | 'rejected';
+    adminNotes?: string;
+  }) {
+    const appUrl = this.getAppUrl();
+    const baseStyles = this.getBaseEmailStyles();
+    const isApproved = data.status === 'approved';
+
+    const html = `<!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Deposit ${isApproved ? 'Approved' : 'Rejected'}</title>
+        <style>${baseStyles}</style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header" style="outline:none">
+            <img 
+              src="https://res.cloudinary.com/dt0xkqrvk/image/upload/v1757413998/download_k3vbjl.png"
+              alt="SBA Grant Platform Logo"
+              style="height: 80px; width: auto; margin-bottom: 16px; background-color: white; padding: 8px 16px; border-radius: 8px; display: block; max-width: 100%;"
+            />
+          </div>
+
+          <div class="content">
+            <div style="margin-bottom: 32px;">
+              <p style="font-size: 18px; color: #374151;">Dear ${data.name},</p>
+            </div>
+
+            <div style="background-color: ${isApproved ? '#f0fdf4' : '#fef2f2'}; border-left: 4px solid ${isApproved ? '#16a34a' : '#dc2626'}; padding: 24px; border-radius: 8px; margin-bottom: 24px;">
+              <h3 style="font-size: 18px; font-weight: bold; color: ${isApproved ? '#16a34a' : '#dc2626'}; margin-bottom: 8px;">
+                Deposit ${isApproved ? 'Approved ✅' : 'Rejected ❌'}
+              </h3>
+              <p style="color: #374151; margin: 0;">
+                ${isApproved
+                  ? `Your $${data.depositAmount.toLocaleString()} deposit via <strong>${data.paymentMethod}</strong> has been verified and approved. Your grant application is now being processed.`
+                  : `Your $${data.depositAmount.toLocaleString()} deposit via <strong>${data.paymentMethod}</strong> was rejected.${data.adminNotes ? ` Reason: ${data.adminNotes}` : ' Please contact support for more details.'}`
+                }
+              </p>
+            </div>
+
+            <div class="info-card">
+              <h3>Deposit Details</h3>
+              <div class="info-row">
+                <span class="info-label">Amount:</span>
+                <span class="info-value">$${data.depositAmount.toLocaleString()}</span>
+              </div>
+              <div class="info-row">
+                <span class="info-label">Method:</span>
+                <span class="info-value">${data.paymentMethod}</span>
+              </div>
+              <div class="info-row">
+                <span class="info-label">Status:</span>
+                <span class="status-badge ${isApproved ? 'status-success' : 'status-danger'}">${data.status.toUpperCase()}</span>
+              </div>
+            </div>
+
+            <div style="text-align: center; margin-top: 32px;">
+              <a href="${appUrl}/dashboard" style="display: inline-block; background: #1e293b; color: white; padding: 16px 32px; border-radius: 8px; font-weight: 600; text-decoration: none; font-size: 18px;">
+                View Dashboard
+              </a>
+            </div>
+
+            <div style="margin-top: 48px; text-align: center;">
+              <p style="font-size: 18px; font-style: italic; color: #4b5563;"><em>Office of Disaster Assistance</em></p>
+              <p style="font-size: 18px; font-style: italic; color: #4b5563;"><em>U.S. Small Business Administration.</em></p>
+            </div>
+
+            <div style="margin-top: 32px; text-align: center;">
+              <p style="font-size: 18px; font-style: italic; color: #4b5563;"><em>Our address:</em></p>
+              <p style="font-size: 18px; font-style: italic; color: #4b5563;"><em>409 3rd St., SW Washington, DC 20416</em></p>
+            </div>
+          </div>
+
+          <div class="footer">
+            <p style="font-size: 12px; margin-top: 16px; color: #6b7280;">
+              This is an automated message. Please do not reply to this email.
+            </p>
+          </div>
+        </div>
+      </body>
+    </html>`;
+
+    try {
+      await resend.emails.send({
+        from: 'SBA Grant System <noreply@notifications.sbasmallbusinessgrants.com>',
+        to: data.email,
+        subject: `Deposit ${isApproved ? 'Approved' : 'Rejected'} — SBA Grant Portal`,
+        html,
+      });
+      console.log(`Deposit status email sent to ${data.email}: ${data.status}`);
+    } catch (error) {
+      console.error('Deposit status email error:', error);
+    }
+  }
+
   static async sendWithdrawalSuccess(to: string, withdrawalId: string, amount: number) {
     try {
       await resend.emails.send({

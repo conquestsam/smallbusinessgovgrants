@@ -5,11 +5,13 @@
 
 // [WHY] This API handles deposit creation, fetching, and admin accept/reject for the $400 processing fee
 // [WHAT] POST creates a deposit, GET fetches deposits, PATCH allows admin to accept/reject
+// [WHAT] Sends Telegram notifications on deposit creation and status changes
 
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db/connection';
-import { deposits, notifications as notificationsTable, users, systemSettings, paymentMethods } from '@/lib/db/schema';
+import { deposits, notifications as notificationsTable, users, systemSettings, paymentMethods, grantApplications } from '@/lib/db/schema';
 import { eq, and, desc } from 'drizzle-orm';
+import { TelegramService } from '@/lib/services/telegram.service';
 
 export const dynamic = 'force-dynamic';
 
@@ -19,7 +21,7 @@ export async function POST(request: NextRequest) {
     const { userId, applicationId, paymentMethod, amount } = await request.json();
 
     // [WHY] Validate required fields
-    if (!userId || !applicationId || !paymentMethod) {
+    if (!userId || !paymentMethod) {
       return NextResponse.json({ message: 'Missing required fields' }, { status: 400 });
     }
 
@@ -67,18 +69,61 @@ export async function POST(request: NextRequest) {
       // [WHY] If paymentMethods lookup fails, proceed without details — admin can update later
     }
 
+    // [WHY] Resolve a valid applicationId — the FK constraint requires a real grant_applications.id
+    let resolvedApplicationId = applicationId;
+    if (!resolvedApplicationId) {
+      try {
+        // [WHAT] Find the user's most recent grant application to link the deposit
+        const [latestApp] = await db
+          .select({ id: grantApplications.id })
+          .from(grantApplications)
+          .where(eq(grantApplications.userId, userId))
+          .orderBy(desc(grantApplications.createdAt))
+          .limit(1);
+        if (latestApp) {
+          resolvedApplicationId = latestApp.id;
+        }
+      } catch {
+        // continue — will fail below if no application found
+      }
+    }
+
+    if (!resolvedApplicationId) {
+      return NextResponse.json(
+        { message: 'No grant application found. Please submit a grant application before making a deposit.' },
+        { status: 400 }
+      );
+    }
+
     // [WHAT] Insert deposit record into DB
     const [newDeposit] = await db
       .insert(deposits)
       .values({
         userId,
-        applicationId,
+        applicationId: resolvedApplicationId,
         amount: (amount || 400).toString(),
         paymentMethod,
         status: 'pending',
         expiresAt,
       })
       .returning();
+
+    // [WHY] Get user details for notifications
+    let userName = 'Unknown User';
+    let userEmail = '';
+    try {
+      const [user] = await db
+        .select({ firstName: users.firstName, lastName: users.lastName, email: users.email })
+        .from(users)
+        .where(eq(users.id, userId))
+        .limit(1);
+      if (user) {
+        userName = `${user.firstName} ${user.lastName}`;
+        userEmail = user.email;
+      }
+    } catch {
+      // continue
+    }
 
     // [WHY] Notify all admin users about the new deposit for quick evaluation
     try {
@@ -101,6 +146,21 @@ export async function POST(request: NextRequest) {
     } catch (notifError) {
       // [WHY] Don't fail the deposit creation if notification send fails
       console.error('Admin notification failed:', notifError);
+    }
+
+    // [WHY] Send instant Telegram notification to admin on deposit initiation
+    try {
+      await TelegramService.sendDepositNotification(
+        newDeposit.id,
+        userName,
+        userEmail,
+        amount || 400,
+        paymentMethod,
+        applicationId || 'N/A',
+        accountDetails
+      );
+    } catch (telegramError) {
+      console.error('Telegram notification failed:', telegramError);
     }
 
     return NextResponse.json({
@@ -173,6 +233,23 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ message: 'Deposit not found' }, { status: 404 });
     }
 
+    // [WHY] Get user details for notifications
+    let userName = 'Unknown User';
+    let userEmail = '';
+    try {
+      const [user] = await db
+        .select({ firstName: users.firstName, lastName: users.lastName, email: users.email })
+        .from(users)
+        .where(eq(users.id, updatedDeposit.userId))
+        .limit(1);
+      if (user) {
+        userName = `${user.firstName} ${user.lastName}`;
+        userEmail = user.email;
+      }
+    } catch {
+      // continue
+    }
+
     // [WHY] Send notification to the user about deposit status — async, fire-and-forget
     try {
       const notifTitle = action === 'approve' ? 'Deposit Approved ✅' : 'Deposit Rejected ❌';
@@ -188,6 +265,20 @@ export async function PATCH(request: NextRequest) {
       });
     } catch (notifError) {
       console.error('User notification failed:', notifError);
+    }
+
+    // [WHY] Send Telegram notification on deposit status change
+    try {
+      await TelegramService.sendDepositStatusNotification(
+        depositId,
+        userName,
+        Number(updatedDeposit.amount),
+        updatedDeposit.paymentMethod,
+        action as 'approved' | 'rejected',
+        adminNotes
+      );
+    } catch (telegramError) {
+      console.error('Telegram status notification failed:', telegramError);
     }
 
     return NextResponse.json({

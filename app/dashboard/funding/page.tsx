@@ -4,8 +4,8 @@ import { observer } from 'mobx-react-lite';
 import { useQuery } from '@tanstack/react-query';
 import {
   Container, Title, Card, Group, Text, Stack, SimpleGrid,
-  Badge, Image, ThemeIcon, Box, UnstyledButton,
-  Divider, Tooltip, Alert, Paper, Button, CopyButton, ActionIcon,
+  Badge, ThemeIcon, Box, Modal,
+  Divider, Tooltip, Alert, Paper, Button,
 } from '@mantine/core';
 import {
   IconCreditCard, IconWallet, IconBrandStripe, IconCurrencyBitcoin,
@@ -19,28 +19,26 @@ import { SBALoader } from '@/components/ui/SBALoader';
 import { SiteTour } from '@/components/ui/SiteTour';
 import { motion, AnimatePresence } from 'framer-motion';
 
-// Reusable copy-to-clipboard row for payment details
-const QuickCopyField = ({ label, value }: { label: string; value: string }) => (
-  <Group justify="space-between" p="sm" style={{ borderRadius: 8, background: 'var(--mantine-color-gray-0)', border: '1px solid var(--mantine-color-gray-2)' }}>
-    <div style={{ overflow: 'hidden', flex: 1 }}>
-      <Text size="xs" c="dimmed" fw={600} tt="uppercase">{label}</Text>
-      <Text size="sm" fw={600} truncate style={{ fontFamily: 'monospace' }}>{value}</Text>
-    </div>
-    <CopyButton value={value} timeout={2000}>
-      {({ copied, copy }) => (
-        <Tooltip label={copied ? 'Copied!' : 'Copy'} withArrow>
-          <ActionIcon color={copied ? 'teal' : 'primary'} variant="light" onClick={copy} size="lg" radius="md">
-            {copied ? <IconCheck size={16} /> : <IconCopy size={16} />}
-          </ActionIcon>
-        </Tooltip>
-      )}
-    </CopyButton>
-  </Group>
-);
+// [WHY] Payment method logo map — uses Clearbit for real brand logos
+const PAYMENT_LOGOS: Record<string, string> = {
+  chime: 'https://logo.clearbit.com/chime.com',
+  paypal: 'https://logo.clearbit.com/paypal.com',
+  cashapp: 'https://logo.clearbit.com/cash.app',
+  cash_app: 'https://logo.clearbit.com/cash.app',
+  zelle: 'https://logo.clearbit.com/zellepay.com',
+  venmo: 'https://logo.clearbit.com/venmo.com',
+  apple_pay: 'https://logo.clearbit.com/apple.com',
+  google_pay: 'https://logo.clearbit.com/pay.google.com',
+  wise: 'https://logo.clearbit.com/wise.com',
+  revolut: 'https://logo.clearbit.com/revolut.com',
+  stripe: 'https://logo.clearbit.com/stripe.com',
+  skrill: 'https://logo.clearbit.com/skrill.com',
+};
 
 const FundingPage = observer(() => {
   const [selectedMethod, setSelectedMethod] = useState<any>(null);
-  const [modalOpened, setModalOpened] = useState(false);
+  const [selectModalOpened, setSelectModalOpened] = useState(false);
+  const [paymentModalOpened, setPaymentModalOpened] = useState(false);
 
   const { data, isLoading } = useQuery({
     queryKey: ['public-payment-methods'],
@@ -53,14 +51,30 @@ const FundingPage = observer(() => {
   const methods = data?.methods || [];
   const wallets = data?.wallets || [];
 
-  const getMethodIcon = (methodName: string, iconUrl?: string) => {
-    if (iconUrl) return <Image src={iconUrl} w={40} h={40} fit="contain" alt="Payment method" />;
+  // [WHY] Render actual brand logos — uses native <img> with onError fallback
+  const getMethodIcon = (methodName: string, iconUrl?: string, size = 36) => {
+    const renderLogo = (src: string, alt: string) => (
+      <img
+        src={src}
+        alt={alt}
+        width={size}
+        height={size}
+        style={{ borderRadius: 6, objectFit: 'contain' }}
+        onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+      />
+    );
+
+    if (iconUrl) return renderLogo(iconUrl, methodName);
+    const logoKey = methodName.toLowerCase().replace(/\s+/g, '_');
+    const logoUrl = PAYMENT_LOGOS[logoKey];
+    if (logoUrl) return renderLogo(logoUrl, methodName);
+
     switch (methodName.toLowerCase()) {
-      case 'stripe': return <IconBrandStripe size={40} color="#635bff" />;
-      case 'crypto': return <IconCurrencyBitcoin size={40} color="#f7931a" />;
+      case 'stripe': return <IconBrandStripe size={size} color="#635bff" />;
+      case 'crypto': return <IconCurrencyBitcoin size={size} color="#f7931a" />;
       case 'wire_transfer':
-      case 'bank_transfer': return <IconBuildingBank size={40} color="#002e6d" />;
-      default: return <IconCreditCard size={40} color="#002e6d" />;
+      case 'bank_transfer': return <IconBuildingBank size={size} color="#002e6d" />;
+      default: return <IconCreditCard size={size} color="#002e6d" />;
     }
   };
 
@@ -76,17 +90,27 @@ const FundingPage = observer(() => {
   const getMethodDescription = (method: any) => {
     switch (method.methodName?.toLowerCase()) {
       case 'stripe':
-        return 'Fast, secure card payments via Stripe global network. Visa, Mastercard, Amex accepted.';
+        return 'Fast, secure card payments via Stripe. Visa, Mastercard, Amex.';
       case 'crypto':
-        return 'Private and secure blockchain-based funding. BTC, ETH, USDT supported.';
+        return 'Blockchain-based funding. BTC, ETH, USDT supported.';
       case 'wire_transfer':
-        return 'Direct wire transfer to our institutional banking partner.';
+        return 'Direct wire transfer to our banking partner.';
       case 'bank_transfer':
-        return 'ACH bank transfer — reliable and fee-free domestic transfers.';
+        return 'ACH bank transfer — reliable and fee-free.';
       default:
-        return method.instructions || 'Complete your funding through this secure channel.';
+        return method.instructions || 'Secure funding channel.';
     }
   };
+
+  // [WHY] Handle payment method selection from the select modal
+  const handleMethodSelect = (method: any) => {
+    setSelectedMethod(method);
+    setSelectModalOpened(false);
+    setPaymentModalOpened(true);
+  };
+
+  // [WHY] Build a combined list of payment options: methods + crypto wallets
+  const hasCryptoMethod = methods.some((m: any) => m.methodName?.toLowerCase() === 'crypto');
 
   return (
     <DashboardLayout>
@@ -94,10 +118,10 @@ const FundingPage = observer(() => {
         <SiteTour page="funding" />
         <Stack gap="xl">
           {/* Header */}
-          <Group justify="space-between" align="flex-end">
+          <Group justify="space-between" align="flex-end" wrap="wrap" gap="md">
             <div>
               <Title order={1} c="#002e6d" fw={800}>Fund Your Account</Title>
-              <Text c="dimmed" size="lg">Select a secure provider to complete your platform contribution.</Text>
+              <Text c="dimmed" size="lg">Securely deposit funds to your grant account.</Text>
             </div>
             <Group gap="xs" visibleFrom="sm">
               <IconShieldCheck size={20} color="var(--mantine-color-green-6)" />
@@ -130,140 +154,254 @@ const FundingPage = observer(() => {
             </Group>
           </Paper>
 
-          <Alert icon={<IconInfoCircle size={16} />} title="Important Note" color="blue" variant="light" radius="md">
-            Funding your account is a one-way transaction. Please verify your funding amount and method before proceeding.
-            Automated gateways like Stripe clear instantly, while Crypto and Manual methods require administrative review.
-          </Alert>
+          {/* Main CTA — Open Payment Method Selection Modal */}
+          <Paper
+            withBorder radius="lg" p="xl"
+            style={{
+              background: 'linear-gradient(135deg, #002e6d 0%, #005ea2 60%, #0076d6 100%)',
+              cursor: 'pointer',
+              position: 'relative',
+              overflow: 'hidden',
+            }}
+            onClick={() => setSelectModalOpened(true)}
+          >
+            <Box style={{ position: 'absolute', top: -40, right: -40, width: 140, height: 140, borderRadius: '50%', background: 'rgba(255,255,255,0.06)' }} />
+            <Group justify="space-between" align="center" style={{ position: 'relative', zIndex: 1 }}>
+              <Group gap="lg">
+                <ThemeIcon size={60} radius="xl" variant="light" style={{ backgroundColor: 'rgba(255,255,255,0.15)' }}>
+                  <IconCreditCard size={30} color="white" />
+                </ThemeIcon>
+                <div>
+                  <Text fw={800} size="xl" c="white">Make a Deposit</Text>
+                  <Text size="sm" style={{ color: 'rgba(255,255,255,0.7)' }}>
+                    Select a payment method to fund your account securely
+                  </Text>
+                </div>
+              </Group>
+              <Button
+                size="lg" radius="md"
+                rightSection={<IconArrowRight size={18} />}
+                style={{ backgroundColor: 'rgba(255,255,255,0.2)', color: 'white', border: '1px solid rgba(255,255,255,0.3)' }}
+              >
+                Select Method
+              </Button>
+            </Group>
+          </Paper>
 
-          {/* Payment Method Cards */}
-          {isLoading ? (
+          {/* Available Methods Preview */}
+          {!isLoading && (methods.length > 0 || wallets.length > 0) && (
+            <Paper withBorder radius="lg" p="xl" style={{ background: '#f8fafc' }}>
+              <Text fw={700} size="lg" c="#002e6d" mb="md">Available Payment Methods</Text>
+              <SimpleGrid cols={{ base: 2, sm: 3, md: 4, lg: 6 }} spacing="md">
+                {methods.map((method: any) => (
+                  <Paper
+                    key={method.id}
+                    withBorder radius="md" p="md" ta="center"
+                    className="payment-card"
+                    style={{ cursor: 'pointer', background: 'white' }}
+                    onClick={() => {
+                      setSelectedMethod(method);
+                      setSelectModalOpened(false);
+                      setPaymentModalOpened(true);
+                    }}
+                  >
+                    <Stack align="center" gap="xs">
+                      <ThemeIcon variant="light" size={48} radius="md" color="gray.0" style={{ border: '1px solid #e5e5e5' }}>
+                        {getMethodIcon(method.methodName, method.iconUrl, 28)}
+                      </ThemeIcon>
+                      <Text fw={600} size="sm" lineClamp={1} style={{ textTransform: 'capitalize' }}>
+                        {method.displayName || method.methodName}
+                      </Text>
+                    </Stack>
+                  </Paper>
+                ))}
+                {/* [WHY] Show crypto wallets as individual method cards if no dedicated crypto method exists */}
+                {!hasCryptoMethod && wallets.map((wallet: any) => (
+                  <Paper
+                    key={wallet.id}
+                    withBorder radius="md" p="md" ta="center"
+                    className="payment-card"
+                    style={{ cursor: 'pointer', background: 'white' }}
+                    onClick={() => {
+                      // Create a synthetic crypto method for the wallet
+                      setSelectedMethod({ methodName: 'crypto', displayName: `${wallet.symbol} (${wallet.network})` });
+                      setSelectModalOpened(false);
+                      setPaymentModalOpened(true);
+                    }}
+                  >
+                    <Stack align="center" gap="xs">
+                      <ThemeIcon variant="light" size={48} radius="md" style={{ border: '1px solid #e5e5e5', backgroundColor: '#fff8ee' }}>
+                        <IconCurrencyBitcoin size={28} color="#f7931a" />
+                      </ThemeIcon>
+                      <Text fw={600} size="sm" lineClamp={1}>{wallet.symbol}</Text>
+                    </Stack>
+                  </Paper>
+                ))}
+              </SimpleGrid>
+            </Paper>
+          )}
+
+          {isLoading && (
             <Box py="xl" ta="center">
               <SBALoader message="Retrieving secure payment configuration..." />
             </Box>
-          ) : methods.length === 0 ? (
-            <Paper withBorder radius="lg" p="xl" ta="center">
-              <ThemeIcon size={60} radius="xl" variant="light" color="gray" mx="auto" mb="md">
-                <IconCreditCard size={30} />
-              </ThemeIcon>
-              <Title order={3} c="dimmed" mb="xs">No Payment Methods Available</Title>
-              <Text size="sm" c="dimmed">Payment methods have not been configured yet. Please contact support.</Text>
-            </Paper>
-          ) : (
-            <SimpleGrid cols={{ base: 1, sm: 2, md: 3 }} spacing="lg">
-              <AnimatePresence mode="wait">
-                {methods.map((method: any, index: number) => (
-                  <motion.div
-                    key={method.id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.1 }}
-                  >
-                    <Card
-                      withBorder
-                      radius="lg"
-                      shadow="sm"
-                      p="xl"
-                      className="payment-card"
-                      style={{ overflow: 'hidden', height: '100%', position: 'relative' }}
-                    >
-                      <Stack justify="space-between" h="100%">
-                        <Stack gap="lg">
-                          {/* Card Header */}
-                          <Group justify="space-between">
-                            <ThemeIcon variant="light" size={60} radius="md" color="gray.0">
-                              {getMethodIcon(method.methodName, method.iconUrl)}
-                            </ThemeIcon>
-                            {getMethodBadge(method.methodName)}
-                          </Group>
-
-                          {/* Name & Description */}
-                          <Stack gap={4}>
-                            <Text fw={800} size="xl" style={{ textTransform: 'capitalize' }}>
-                              {method.displayName || method.methodName}
-                            </Text>
-                            <Text size="sm" c="dimmed" lineClamp={2}>
-                              {getMethodDescription(method)}
-                            </Text>
-                          </Stack>
-
-                          {/* Quick Details (bank info preview on card) */}
-                          {method.accountNumber && method.methodName !== 'stripe' && (
-                            <Paper withBorder p="sm" radius="md" bg="gray.0">
-                              <Stack gap={4}>
-                                {method.bankName && (
-                                  <Group gap="xs">
-                                    <IconBuildingBank size={14} color="var(--mantine-color-dimmed)" />
-                                    <Text size="xs" c="dimmed">{method.bankName}</Text>
-                                  </Group>
-                                )}
-                                {method.accountNumber && (
-                                  <QuickCopyField label="Account" value={method.accountNumber} />
-                                )}
-                                {method.routingNumber && (
-                                  <QuickCopyField label="Routing" value={method.routingNumber} />
-                                )}
-                              </Stack>
-                            </Paper>
-                          )}
-
-                          {/* Processing Info */}
-                          <Group gap="xl">
-                            {method.processingTime && (
-                              <Group gap={4}>
-                                <IconClock size={14} color="var(--mantine-color-dimmed)" />
-                                <Text size="xs" c="dimmed">{method.processingTime}</Text>
-                              </Group>
-                            )}
-                            {method.fee && (
-                              <Group gap={4}>
-                                <IconReceipt size={14} color="var(--mantine-color-dimmed)" />
-                                <Text size="xs" c="dimmed">Fee: {method.fee}</Text>
-                              </Group>
-                            )}
-                          </Group>
-                        </Stack>
-
-                        {/* CTA Button */}
-                        <Button
-                          mt="xl"
-                          fullWidth
-                          size="md"
-                          radius="md"
-                          // [WHY] Using explicit backgroundColor instead of color="primary" to avoid
-                          // TailwindCSS --primary variable collision making buttons invisible
-                          style={{ backgroundColor: '#005ea2' }}
-                          rightSection={<IconArrowRight size={18} />}
-                          onClick={() => {
-                            setSelectedMethod(method);
-                            setModalOpened(true);
-                          }}
-                        >
-                          Select {method.displayName || method.methodName}
-                        </Button>
-                      </Stack>
-                    </Card>
-                  </motion.div>
-                ))}
-              </AnimatePresence>
-            </SimpleGrid>
           )}
 
           {/* VIP Support */}
           <Paper withBorder radius="lg" p="xl" bg="#f1f3f5" style={{ borderStyle: 'dashed' }}>
-            <Group justify="space-between">
-              <Stack gap={2}>
+            <Group justify="space-between" wrap="wrap" gap="md">
+              <Stack gap={2} style={{ flex: 1 }}>
                 <Text fw={700} size="lg">Need custom funding assistance?</Text>
                 <Text size="sm" c="dimmed">Our enterprise support team can help with large wire transfers and institutional onboarding.</Text>
               </Stack>
-              <Button variant="outline" color="primary" radius="md">Contact VIP Desk</Button>
+              <Button variant="outline" radius="md" style={{ borderColor: '#005ea2', color: '#005ea2' }}>Contact VIP Desk</Button>
             </Group>
           </Paper>
         </Stack>
       </Container>
 
+      {/* ─── PAYMENT METHOD SELECTION MODAL ───────────────────────── */}
+      <Modal
+        opened={selectModalOpened}
+        onClose={() => setSelectModalOpened(false)}
+        title={null}
+        centered
+        radius="lg"
+        size="lg"
+        padding="xl"
+        overlayProps={{ backgroundOpacity: 0.6, blur: 8 }}
+        withCloseButton
+      >
+        <Stack gap="lg">
+          {/* Header */}
+          <Stack align="center" gap="xs">
+            <ThemeIcon size={60} radius="xl" variant="light" style={{ backgroundColor: 'rgba(0, 94, 162, 0.1)', color: '#005ea2' }}>
+              <IconCreditCard size={30} />
+            </ThemeIcon>
+            <Text fw={800} size="xl" c="#002e6d" ta="center">Select Payment Method</Text>
+            <Text size="sm" c="dimmed" ta="center" maw={400}>
+              Choose your preferred method to fund your account
+            </Text>
+          </Stack>
+
+          {/* Payment Session Notice */}
+          <Alert icon={<IconClock size={16} />} title="Payment Session Notice" color="orange" variant="light" radius="md">
+            After selecting a payment method, you will have <strong>10 minutes</strong> to complete your payment.
+            The account details provided are only valid within this window.
+          </Alert>
+
+          {/* Payment Methods Grid */}
+          {isLoading ? (
+            <Box py="xl" ta="center">
+              <SBALoader message="Loading payment methods..." />
+            </Box>
+          ) : (
+            <Stack gap="sm">
+              {methods.map((method: any) => (
+                <Paper
+                  key={method.id}
+                  withBorder p="lg" radius="md"
+                  style={{
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                    background: 'white',
+                  }}
+                  className="payment-card"
+                  onClick={() => handleMethodSelect(method)}
+                >
+                  <Group justify="space-between">
+                    <Group gap="md">
+                      <ThemeIcon variant="light" size={50} radius="md" style={{ border: '1px solid #e5e5e5', backgroundColor: '#f8f9fa' }}>
+                        {getMethodIcon(method.methodName, method.iconUrl, 28)}
+                      </ThemeIcon>
+                      <div>
+                        <Text fw={700} size="md" style={{ textTransform: 'capitalize' }}>
+                          {method.displayName || method.methodName}
+                        </Text>
+                        <Text size="xs" c="dimmed" lineClamp={1}>{getMethodDescription(method)}</Text>
+                      </div>
+                    </Group>
+                    <Group gap="sm">
+                      {getMethodBadge(method.methodName)}
+                      <IconArrowRight size={18} color="#adb5bd" />
+                    </Group>
+                  </Group>
+                </Paper>
+              ))}
+
+              {/* [WHY] Show crypto wallets as selectable options even if no "crypto" payment method exists */}
+              {wallets.length > 0 && (
+                <>
+                  <Divider label="Cryptocurrency" labelPosition="center" my="xs" />
+                  {wallets.map((wallet: any) => (
+                    <Paper
+                      key={wallet.id}
+                      withBorder p="lg" radius="md"
+                      style={{ cursor: 'pointer', transition: 'all 0.2s ease', background: '#fffcf5' }}
+                      className="payment-card"
+                      onClick={() => {
+                        // Use the crypto method if it exists, otherwise create a synthetic one
+                        const cryptoMethod = methods.find((m: any) => m.methodName?.toLowerCase() === 'crypto') || {
+                          methodName: 'crypto',
+                          displayName: 'Cryptocurrency',
+                        };
+                        handleMethodSelect(cryptoMethod);
+                      }}
+                    >
+                      <Group justify="space-between">
+                        <Group gap="md">
+                          <ThemeIcon variant="light" size={50} radius="md" style={{ border: '1px solid #fde68a', backgroundColor: '#fffbeb' }}>
+                            <IconCurrencyBitcoin size={28} color="#f7931a" />
+                          </ThemeIcon>
+                          <div>
+                            <Text fw={700} size="md">{wallet.symbol} — {wallet.network}</Text>
+                            <Text size="xs" c="dimmed">Send {wallet.symbol} to receive instant credit</Text>
+                          </div>
+                        </Group>
+                        <Group gap="sm">
+                          <Badge color="orange" variant="light">Crypto</Badge>
+                          <IconArrowRight size={18} color="#adb5bd" />
+                        </Group>
+                      </Group>
+                    </Paper>
+                  ))}
+                </>
+              )}
+
+              {methods.length === 0 && wallets.length === 0 && (
+                <Paper withBorder radius="lg" p="xl" ta="center" bg="gray.0">
+                  <ThemeIcon size={60} radius="xl" variant="light" color="gray" mx="auto" mb="md">
+                    <IconCreditCard size={30} />
+                  </ThemeIcon>
+                  <Title order={3} c="dimmed" mb="xs">No Payment Methods Available</Title>
+                  <Text size="sm" c="dimmed">Payment methods have not been configured yet. Please contact support.</Text>
+                </Paper>
+              )}
+            </Stack>
+          )}
+
+          {/* Trust Badges */}
+          <Group justify="center" gap="lg" mt="xs">
+            <Group gap={4}>
+              <IconShieldCheck size={14} color="var(--mantine-color-green-6)" />
+              <Text size="xs" c="dimmed">Secure Payment</Text>
+            </Group>
+            <Group gap={4}>
+              <IconLock size={14} color="var(--mantine-color-blue-6)" />
+              <Text size="xs" c="dimmed">256-bit SSL</Text>
+            </Group>
+            <Group gap={4}>
+              <IconReceipt size={14} color="var(--mantine-color-violet-6)" />
+              <Text size="xs" c="dimmed">Instant Receipt</Text>
+            </Group>
+          </Group>
+        </Stack>
+      </Modal>
+
+      {/* ─── PAYMENT FLOW MODAL (countdown, details, upload) ──── */}
       <PaymentFlowModal
-        opened={modalOpened}
-        onClose={() => setModalOpened(false)}
+        opened={paymentModalOpened}
+        onClose={() => setPaymentModalOpened(false)}
         method={selectedMethod}
         wallets={wallets}
       />
@@ -273,9 +411,9 @@ const FundingPage = observer(() => {
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
         .payment-card:hover {
-            transform: translateY(-8px);
-            box-shadow: 0 12px 24px -8px rgba(0, 46, 109, 0.15);
-            border-color: var(--mantine-color-blue-3);
+            transform: translateY(-4px);
+            box-shadow: 0 8px 20px -6px rgba(0, 46, 109, 0.12);
+            border-color: #93c5fd;
         }
       `}</style>
     </DashboardLayout>

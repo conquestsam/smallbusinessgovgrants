@@ -119,7 +119,7 @@ const ContactSettingsPage = observer(() => {
   return (
     <AdminSettingsLayout>
       <Stack gap="lg">
-        <Group justify="space-between" align="center">
+        <Group justify="space-between" align="center" wrap="wrap" gap="md">
           <div>
             <Title order={3}>Support Channels</Title>
             <Text c="dimmed" size="sm">Manage external communication endpoints and deep-linking.</Text>
@@ -128,6 +128,7 @@ const ContactSettingsPage = observer(() => {
             variant="filled"
             leftSection={<IconPlus size={16} />}
             onClick={() => { setSelectedMethod(null); openModal(); }}
+            style={{ backgroundColor: '#005ea2' }}
           >
             Provision Channel
           </Button>
@@ -152,7 +153,7 @@ const ContactSettingsPage = observer(() => {
                         {...provided.draggableProps}
                         bg="white"
                       >
-                        <Group justify="space-between">
+                        <Group justify="space-between" wrap="wrap" gap="sm">
                           <Group>
                             <div {...provided.dragHandleProps}>
                               <IconGripVertical size={20} color="var(--mantine-color-gray-5)" style={{ cursor: 'grab' }} />
@@ -165,7 +166,7 @@ const ContactSettingsPage = observer(() => {
                               </Group>
                             </div>
                           </Group>
-                          <Group>
+                          <Group gap="sm" wrap="wrap">
                             <Switch
                               checked={contact.enabled}
                               onChange={(e) => {
@@ -174,18 +175,20 @@ const ContactSettingsPage = observer(() => {
                               }}
                               label="Online"
                             />
-                            <ActionIcon variant="light" color="blue" onClick={() => { setSelectedMethod(contact); openModal(); }} size="lg">
+                            <ActionIcon variant="light" onClick={() => { setSelectedMethod(contact); openModal(); }} size="lg"
+                              style={{ backgroundColor: 'rgba(0, 94, 162, 0.1)', color: '#005ea2' }}
+                            >
                               <IconSettings size={20} />
                             </ActionIcon>
                             <ActionIcon
                               variant="light"
-                              color="red"
                               size="lg"
                               onClick={() => {
                                 if (confirm(`Remove this ${contact.platform} channel?`)) {
                                   deleteMutation.mutate(contact.id);
                                 }
                               }}
+                              style={{ backgroundColor: 'rgba(220, 38, 38, 0.1)', color: '#dc2626' }}
                             >
                               <IconTrash size={18} />
                             </ActionIcon>
@@ -194,7 +197,7 @@ const ContactSettingsPage = observer(() => {
 
                         <Divider my="md" />
 
-                        <Group grow align="flex-start">
+                        <Group grow align="flex-start" wrap="wrap" gap="md">
                           <Stack gap={4}>
                             <Text size="xs" fw={700} c="dimmed" tt="uppercase">Destination Link</Text>
                             <Text size="sm" c="blue" component="a" href={contact.link} target="_blank" style={{ textDecoration: 'underline' }}>
@@ -245,7 +248,9 @@ const ContactSettingsPage = observer(() => {
               <Select name="platform" label="Platform Protocol" defaultValue={selectedMethod?.platform} data={['WhatsApp', 'Telegram', 'Signal', 'Email', 'Custom']} required />
               <TextInput name="link" label="Endpoint Identifier" placeholder="e.g. https://t.me/username" defaultValue={selectedMethod?.link} required />
               <Textarea name="defaultMessage" label="Pre-filled Communication Context" placeholder="Hello, I need assistance with..." defaultValue={selectedMethod?.defaultMessage} rows={4} />
-              <Button type="submit" fullWidth mt="md" size="lg" leftSection={<IconDeviceFloppy size={20} />}>
+              <Button type="submit" fullWidth mt="md" size="lg" leftSection={<IconDeviceFloppy size={20} />}
+                style={{ backgroundColor: '#005ea2' }}
+              >
                 Deploy Configuration
               </Button>
             </Stack>

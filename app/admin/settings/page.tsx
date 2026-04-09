@@ -100,7 +100,7 @@ const GeneralSettingsPage = observer(() => {
     <AdminSettingsLayout>
       <Stack gap="lg">
         <Tabs value={activeTab} onChange={setActiveTab} variant="outline" radius="md">
-          <Tabs.List>
+          <Tabs.List style={{ overflowX: 'auto', flexWrap: 'nowrap' }}>
             <Tabs.Tab value="general" leftSection={<IconSettings size={16} />}>General Config</Tabs.Tab>
             <Tabs.Tab value="email" leftSection={<IconMail size={16} />}>Infrastructure Emails</Tabs.Tab>
             <Tabs.Tab value="security" leftSection={<IconClock size={16} />}>Security & Logs</Tabs.Tab>
@@ -127,14 +127,20 @@ const GeneralSettingsPage = observer(() => {
                     <NumberInput label="Max Application Amount" prefix="$" thousandSeparator="," {...systemForm.getInputProps('maxApplicationAmount')} />
                   </Grid.Col>
                   <Grid.Col span={12}>
-                    <Group>
+                    <Group wrap="wrap" gap="md">
                       <Switch label="Maintenance Mode" {...systemForm.getInputProps('maintenanceMode', { type: 'checkbox' })} />
                       <Switch label="Registration Enabled" {...systemForm.getInputProps('registrationEnabled', { type: 'checkbox' })} />
                     </Group>
                   </Grid.Col>
                 </Grid>
                 <Group justify="flex-end" mt="xl">
-                  <Button type="submit" loading={updateSettingsMutation.isPending} disabled={!systemForm.isDirty()}>
+                  <Button
+                    type="submit"
+                    size="md"
+                    loading={updateSettingsMutation.isPending}
+                    disabled={!systemForm.isDirty()}
+                    style={{ backgroundColor: '#005ea2', minWidth: 160 }}
+                  >
                     Save Changes
                   </Button>
                 </Group>
@@ -155,7 +161,14 @@ const GeneralSettingsPage = observer(() => {
                   <Grid.Col span={{ base: 12, md: 6 }}><TextInput label="From Name" {...emailForm.getInputProps('fromName')} /></Grid.Col>
                 </Grid>
                 <Group justify="flex-end" mt="xl">
-                  <Button type="submit" variant="filled" loading={updateSettingsMutation.isPending} disabled={!emailForm.isDirty()}>
+                  <Button
+                    type="submit"
+                    variant="filled"
+                    size="md"
+                    loading={updateSettingsMutation.isPending}
+                    disabled={!emailForm.isDirty()}
+                    style={{ backgroundColor: '#005ea2', minWidth: 180 }}
+                  >
                     Apply Email Protocol
                   </Button>
                 </Group>

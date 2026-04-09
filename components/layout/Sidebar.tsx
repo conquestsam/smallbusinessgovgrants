@@ -48,6 +48,7 @@ const userMenuItems: MenuItem[] = [
 const adminMenuItems: MenuItem[] = [
   { label: 'Admin Dashboard', icon: IconLayoutDashboard, href: '/admin' },
   { label: 'Applications', icon: IconFileText, href: '/admin/applications' },
+  { label: 'Deposits', icon: IconReceipt, href: '/admin/deposits' },
   { label: 'Withdrawals', icon: IconCreditCard, href: '/admin/withdrawals' },
   { label: 'Users Management', icon: IconUsers, href: '/admin/users' },
   { label: 'Analytics', icon: IconChartBar, href: '/admin/analytics' },
