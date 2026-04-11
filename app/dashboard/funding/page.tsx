@@ -46,6 +46,8 @@ const FundingPage = observer(() => {
       const response = await fetch('/api/payments/methods');
       return response.json();
     },
+    staleTime: 0,
+    refetchInterval: 30_000, // Poll every 30s for admin changes
   });
 
   const methods = data?.methods || [];

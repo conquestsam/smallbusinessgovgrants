@@ -3,6 +3,9 @@ import { db } from '@/lib/db/connection';
 import { paymentMethods, paymentWallets } from '@/lib/db/schema';
 import { eq, and, asc } from 'drizzle-orm';
 
+// [WHY] Prevents Vercel edge caching — admin changes reflect immediately on client
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest) {
   try {
     // Fetch enabled payment methods ordered by priority
@@ -21,6 +24,12 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       methods,
       wallets
+    }, {
+      headers: {
+        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+        'CDN-Cache-Control': 'no-store',
+        'Vercel-CDN-Cache-Control': 'no-store',
+      },
     });
   } catch (error) {
     console.error('Public payments fetch error:', error);

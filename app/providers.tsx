@@ -34,12 +34,6 @@ const theme = createTheme({
         root: {
           fontWeight: 600,
           transition: 'all 0.2s ease',
-          '&[data-variant="filled"]': {
-            backgroundColor: theme.colors.primary[5],
-            '&:hover': {
-              backgroundColor: theme.colors.primary[6],
-            },
-          },
         },
       }),
     },

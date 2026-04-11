@@ -1,6 +1,6 @@
 'use client';
 
-import { AppShell, NavLink, Stack, Title, Text, Breadcrumbs, Anchor, Card, Group, Tabs, Divider } from '@mantine/core';
+import { AppShell, NavLink, Stack, Title, Text, Breadcrumbs, Anchor, Card, Group, Tabs, Divider, Box } from '@mantine/core';
 import { IconSettings, IconCreditCard, IconMessage, IconMail, IconArrowLeft } from '@tabler/icons-react';
 import { usePathname, useRouter } from 'next/navigation';
 import { DashboardLayout } from './DashboardLayout';
@@ -56,9 +56,9 @@ export const AdminSettingsLayout = ({ children, activeTab }: AdminSettingsLayout
 
         <Divider mb="xl" />
 
-        <Group align="flex-start" gap="xl" wrap="nowrap">
+        <Group align="flex-start" gap="xl" style={{ flexWrap: 'nowrap' }}>
           {/* PERSISTENT LEFT SIDEBAR FOR SETTINGS */}
-          <Stack w={280} gap="xs" visibleFrom="md">
+          <Stack w={280} gap="xs" visibleFrom="md" style={{ flexShrink: 0 }}>
             <Text size="xs" fw={700} tt="uppercase" c="dimmed" mb={4}>
               Sections
             </Text>
@@ -78,7 +78,7 @@ export const AdminSettingsLayout = ({ children, activeTab }: AdminSettingsLayout
           </Stack>
 
           {/* MAIN CONTENT AREA */}
-          <Box style={{ flex: 1 }}>
+          <Box style={{ flex: 1, minWidth: 0, width: '100%', overflowX: 'hidden' }}>
             {children}
           </Box>
         </Group>
@@ -87,5 +87,3 @@ export const AdminSettingsLayout = ({ children, activeTab }: AdminSettingsLayout
   );
 };
 
-// Help helper for Box if not imported properly from mantine
-import { Box } from '@mantine/core';

@@ -4,6 +4,9 @@ import { contactMethods, adminActionsLog } from '@/lib/db/schema';
 import { eq, asc } from 'drizzle-orm';
 import { getAdminSession } from '@/lib/auth';
 
+// [WHY] Prevents Vercel edge caching — admin changes reflect immediately
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest) {
   const session = await getAdminSession(request);
   if (!session) return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });

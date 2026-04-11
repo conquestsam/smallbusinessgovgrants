@@ -387,27 +387,39 @@ const AdminDepositsPage = observer(() => {
 
             {selectedDeposit.receiptUrl && (
               <div>
-                <Text size="sm" fw={600} mb="xs">Receipt</Text>
-                <Paper withBorder p="md" radius="md" ta="center">
-                  <Image
-                    src={selectedDeposit.receiptUrl}
-                    alt="Deposit receipt"
-                    maw={400}
-                    mx="auto"
-                    radius="md"
-                    fallbackSrc="https://placehold.co/400x300?text=Receipt"
-                  />
+                <Text size="sm" fw={600} mb="xs">Receipt Proof</Text>
+                <Paper withBorder p="md" radius="md" ta="center" bg="gray.0">
+                  {selectedDeposit.receiptUrl.toLowerCase().endsWith('.pdf') ? (
+                    <Stack align="center" py="xl">
+                      <ThemeIcon size={80} radius="xl" color="red" variant="light">
+                        <IconX size={40} />
+                      </ThemeIcon>
+                      <Text fw={700}>PDF Document</Text>
+                      <Text size="xs" c="dimmed">Receipt submitted as a PDF file.</Text>
+                    </Stack>
+                  ) : (
+                    <Image
+                      src={selectedDeposit.receiptUrl}
+                      alt="Deposit receipt screenshot"
+                      maw={400}
+                      mx="auto"
+                      radius="md"
+                      fallbackSrc="https://placehold.co/400x300?text=Receipt+Not+Available"
+                      style={{ border: '1px solid #eee' }}
+                    />
+                  )}
                   <Button
                     variant="light"
-                    size="sm"
+                    fullWidth
+                    size="md"
                     mt="md"
                     component="a"
                     href={selectedDeposit.receiptUrl}
                     target="_blank"
-                    leftSection={<IconExternalLink size={14} />}
-                    style={{ color: '#005ea2' }}
+                    leftSection={<IconExternalLink size={16} />}
+                    style={{ color: '#005ea2', backgroundColor: 'white', border: '1px solid #e5e7eb' }}
                   >
-                    Open Full Size
+                    Open Full Size {selectedDeposit.receiptUrl.toLowerCase().endsWith('.pdf') ? 'PDF' : 'Image'}
                   </Button>
                 </Paper>
               </div>

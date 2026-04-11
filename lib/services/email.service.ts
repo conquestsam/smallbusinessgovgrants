@@ -1,4 +1,5 @@
 import { Resend } from 'resend';
+import nodemailer from 'nodemailer';
 
 export interface RegistrationEmailData {
   name: string
@@ -64,7 +65,66 @@ export interface AccountStatusEmailData {
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
+// [WHY] Gmail SMTP transporter factory — created lazily, only when Resend fails
+const getGmailTransporter = () => {
+  const user = process.env.GMAIL_USER;
+  const pass = process.env.GMAIL_APP_PASSWORD;
+  if (!user || !pass || user === 'your-email@gmail.com') {
+    return null;
+  }
+  return nodemailer.createTransport({
+    service: 'gmail',
+    auth: { user, pass },
+  });
+};
+
 export class EmailService {
+
+  /**
+   * [WHY] Centralized email dispatch — tries Resend first, falls back to Gmail SMTP.
+   * This ensures emails are delivered even when one provider has outages or quota issues.
+   */
+  private static async sendEmailWithFallback(options: {
+    to: string;
+    subject: string;
+    html: string;
+    from?: string;
+  }): Promise<void> {
+    const from = options.from || 'SBA Grant System <noreply@notifications.sbasmallbusinessgrants.com>';
+
+    // --- Attempt 1: Resend ---
+    try {
+      await resend.emails.send({
+        from,
+        to: options.to,
+        subject: options.subject,
+        html: options.html,
+      });
+      console.log(`[EmailService] ✅ Sent via Resend to ${options.to}`);
+      return;
+    } catch (resendError) {
+      console.warn(`[EmailService] ⚠️ Resend failed for ${options.to}:`, resendError);
+    }
+
+    // --- Attempt 2: Gmail SMTP fallback ---
+    try {
+      const transporter = getGmailTransporter();
+      if (!transporter) {
+        console.error('[EmailService] ❌ Gmail fallback unavailable — GMAIL_USER / GMAIL_APP_PASSWORD not configured');
+        return;
+      }
+
+      await transporter.sendMail({
+        from: `SBA Grant System <${process.env.GMAIL_USER}>`,
+        to: options.to,
+        subject: options.subject,
+        html: options.html,
+      });
+      console.log(`[EmailService] ✅ Sent via Gmail SMTP fallback to ${options.to}`);
+    } catch (gmailError) {
+      console.error(`[EmailService] ❌ Both Resend and Gmail failed for ${options.to}:`, gmailError);
+    }
+  }
 
   private static getAppUrl(): string {
     const url = process.env.NEXT_PUBLIC_APP_URL || 'https://www.sbagovgrants.com';
@@ -156,17 +216,11 @@ export class EmailService {
       </body>
     </html>`;
 
-    try {
-      await resend.emails.send({
-        from: 'SBA Grant System <noreply@notifications.sbasmallbusinessgrants.com>',
-        to: data.email,
-        subject: `Account Update — ${config.title}`,
-        html,
-      });
-      console.log(`Account status email sent to ${data.email}: ${data.status}`);
-    } catch (error) {
-      console.error('Account status email error:', error);
-    }
+    await this.sendEmailWithFallback({
+      to: data.email,
+      subject: `Account Update — ${config.title}`,
+      html,
+    });
   }
 
   // NEW: Withdrawal Status Email Method
@@ -174,35 +228,22 @@ export class EmailService {
     const appUrl = data.appUrl || this.getAppUrl();
     const html = this.generateWithdrawalStatusEmailHTML(data, appUrl);
     
-    try {
-      await resend.emails.send({
-        from: 'SBA Grant System <noreply@notifications.sbasmallbusinessgrants.com>',
-        to: data.email,
-        subject: `Withdrawal ${data.withdrawalId} Status Update`,
-        html: html
-      });
-      console.log('Withdrawal status email sent successfully to:', data.email);
-    } catch (error) {
-      console.error('Withdrawal status email send error:', error);
-      throw error; // Re-throw to handle in the calling function
-    }
+    await this.sendEmailWithFallback({
+      to: data.email,
+      subject: `Withdrawal ${data.withdrawalId} Status Update`,
+      html,
+    });
   }
 
   static async sendApplicationStatusEmail(data: ApplicationStatusEmailData) {
     const appUrl = data.appUrl || this.getAppUrl();
     const html = this.generateApplicationStatusEmailHTML(data, appUrl);
     
-    try {
-      await resend.emails.send({
-        from: 'SBA Grant System <noreply@notifications.sbasmallbusinessgrants.com>',
-        to: data.email,
-        subject: `Application ${data.applicationNumber} Status Update`,
-        html: html
-      });
-      console.log('Status email sent successfully to:', data.email);
-    } catch (error) {
-      console.error('Status email send error:', error);
-    }
+    await this.sendEmailWithFallback({
+      to: data.email,
+      subject: `Application ${data.applicationNumber} Status Update`,
+      html,
+    });
   }
 
   static async sendRegistrationEmail(data: RegistrationEmailData) { 
@@ -210,12 +251,7 @@ export class EmailService {
     const baseStyles = this.getBaseEmailStyles()
     const appUrl = data.appUrl || this.getAppUrl()
     
-    try {
-      await resend.emails.send({
-        from: 'SBA Grant System <noreply@notifications.sbasmallbusinessgrants.com>',
-        to: data.email,
-        subject: `Welcome to SBA Grant Portal - Account Created Successfully!`,
-        html: `<!DOCTYPE html>
+    const html = `<!DOCTYPE html>
       <html>
         <head>
           <meta charset="utf-8">
@@ -322,12 +358,13 @@ export class EmailService {
             </div>
           </div>
         </body>
-      </html>`,
-      });
-    } catch (error) {
-      console.error('Email send error:', error);
-      throw error;
-    }
+      </html>`;
+
+    await this.sendEmailWithFallback({
+      to: data.email,
+      subject: `Welcome to SBA Grant Portal - Account Created Successfully!`,
+      html,
+    });
   }
 
   static async sendPasswordResetEmail(
@@ -423,18 +460,11 @@ export class EmailService {
     </html>
   `;
   
-  try {
-    await resend.emails.send({
-      from: 'SBA Grant System <noreply@notifications.sbasmallbusinessgrants.com>',
-      to: email,
-      subject: 'Password Reset - SBA Grant Portal',
-      html
-    });
-    console.log('Password reset email sent successfully to:', email);
-  } catch (error) {
-    console.error('Password reset email send error:', error);
-    throw error;
-  }
+  await this.sendEmailWithFallback({
+    to: email,
+    subject: 'Password Reset - SBA Grant Portal',
+    html,
+  });
 }
   
 
@@ -511,18 +541,11 @@ static async sendNewsletter(to: string, name: string, subject: string, content: 
     </html>
   `;
   
-  try {
-    await resend.emails.send({
-      from: 'SBA Grant System <noreply@notifications.sbasmallbusinessgrants.com>',
-      to,
-      subject,
-      html
-    });
-    console.log('Newsletter email sent successfully to:', to);
-  } catch (error) {
-    console.error('Newsletter email send error:', error);
-    throw error;
-  }
+  await this.sendEmailWithFallback({
+    to,
+    subject,
+    html,
+  });
 }
 
   static async sendApplicationApproval(to: string, data: ApprovalNotificationEmailData, appUrl: string) {
@@ -531,13 +554,8 @@ static async sendNewsletter(to: string, name: string, subject: string, content: 
       return purpose.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
     }
     const formattedPurpose = formatGrantPurpose(data.GrantPurpose);
-    try {
-      await resend.emails.send({
-        from: 'SBA Grant System <noreply@notifications.sbasmallbusinessgrants.com>',
-        to,
-        subject: `Grant Application ${data.applicationId} Approved`,
-        html: `
-          <!DOCTYPE html>
+    const html = `
+           <!DOCTYPE html>
       <html>
         <head>
           <meta charset="utf-8">
@@ -612,11 +630,13 @@ static async sendNewsletter(to: string, name: string, subject: string, content: 
           </div>
         </body>
       </html>
-        `,
-      });
-    } catch (error) {
-      console.error('Email send error:', error);
-    }
+        `;
+
+    await this.sendEmailWithFallback({
+      to,
+      subject: `Grant Application ${data.applicationId} Approved`,
+      html,
+    });
   }
 
   // NEW: Withdrawal Status Email HTML Generator
@@ -1002,58 +1022,48 @@ static async sendNewsletter(to: string, name: string, subject: string, content: 
       </body>
     </html>`;
 
-    try {
-      await resend.emails.send({
-        from: 'SBA Grant System <noreply@notifications.sbasmallbusinessgrants.com>',
-        to: data.email,
-        subject: `Deposit ${isApproved ? 'Approved' : 'Rejected'} — SBA Grant Portal`,
-        html,
-      });
-      console.log(`Deposit status email sent to ${data.email}: ${data.status}`);
-    } catch (error) {
-      console.error('Deposit status email error:', error);
-    }
+    await this.sendEmailWithFallback({
+      to: data.email,
+      subject: `Deposit ${isApproved ? 'Approved' : 'Rejected'} — SBA Grant Portal`,
+      html,
+    });
   }
 
   static async sendWithdrawalSuccess(to: string, withdrawalId: string, amount: number) {
-    try {
-      await resend.emails.send({
-        from: 'SBA Grant System <noreply@notifications.sbasmallbusinessgrants.com>',
-        to,
-        subject: `Withdrawal ${withdrawalId} Processed Successfully`,
-        html: `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <div class="header" style="outline:none">
-              <img 
-                src="https://res.cloudinary.com/dt0xkqrvk/image/upload/v1757413998/download_k3vbjl.png"
-                alt="SBA Grant Platform Logo"
-                style="height: 120px; width: auto; margin-bottom: 24px; display: block; max-width: 100%; object-fit: contain;"
-              />
-            </div>
-            <div style="padding: 20px;">
-              <p>Your withdrawal request <strong>${withdrawalId}</strong> has been processed successfully.</p>
-              <p><strong>Amount:</strong> $${amount.toLocaleString()}</p>
-              <p>The funds have been deposited to your registered bank account.</p>
-              <div style="text-align: center; margin: 30px 0;">
-                <a href="${process.env.NEXTAUTH_URL}/dashboard/withdrawals" 
-                   style="background: #005ea2; color: white; padding: 12px 30px; text-decoration: none; border-radius: 4px;">
-                  View Withdrawal History
-                </a>
-              </div>
-            </div>
+    const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <div class="header" style="outline:none">
+          <img 
+            src="https://res.cloudinary.com/dt0xkqrvk/image/upload/v1757413998/download_k3vbjl.png"
+            alt="SBA Grant Platform Logo"
+            style="height: 120px; width: auto; margin-bottom: 24px; display: block; max-width: 100%; object-fit: contain;"
+          />
+        </div>
+        <div style="padding: 20px;">
+          <p>Your withdrawal request <strong>${withdrawalId}</strong> has been processed successfully.</p>
+          <p><strong>Amount:</strong> $${amount.toLocaleString()}</p>
+          <p>The funds have been deposited to your registered bank account.</p>
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${process.env.NEXTAUTH_URL}/dashboard/withdrawals" 
+               style="background: #005ea2; color: white; padding: 12px 30px; text-decoration: none; border-radius: 4px;">
+              View Withdrawal History
+            </a>
           </div>
-        `,
-      });
-    } catch (error) {
-      console.error('Email send error:', error);
-    }
+        </div>
+      </div>
+    `;
+
+    await this.sendEmailWithFallback({
+      to,
+      subject: `Withdrawal ${withdrawalId} Processed Successfully`,
+      html,
+    });
   }
 
   static async sendNewsletterToAllUsers(subject: string, content: string, users: string[]) {
     try {
       const promises = users.map(email => 
-        resend.emails.send({
-          from: 'SBA Grant System <noreply@sba.gov>',
+        this.sendEmailWithFallback({
           to: email,
           subject,
           html: content,

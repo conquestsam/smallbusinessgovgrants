@@ -66,7 +66,7 @@ const PaymentMethodForm = ({ method, onSave, isSaving }: { method: any; onSave: 
         value={formData.instructions}
         onChange={(e) => handleChange('instructions', e.currentTarget.value)}
       />
-      <Box style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '12px' }}>
+      <Box style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(200px, 100%), 1fr))', gap: '12px' }}>
         <TextInput
           label="Account Name"
           placeholder="e.g. John Doe"
@@ -208,10 +208,10 @@ const PaymentSettingsPage = observer(() => {
     <AdminSettingsLayout>
       <Stack gap="lg">
         <Tabs defaultValue="gateways" variant="outline" radius="md">
-          <Tabs.List style={{ overflowX: 'auto', flexWrap: 'nowrap' }}>
-            <Tabs.Tab value="gateways" leftSection={<IconCreditCard size={16} />}>Payment Methods</Tabs.Tab>
-            <Tabs.Tab value="wallets" leftSection={<IconWallet size={16} />}>Crypto Wallets</Tabs.Tab>
-            <Tabs.Tab value="audit" leftSection={<IconHistory size={16} />}>Audit Log</Tabs.Tab>
+          <Tabs.List style={{ overflowX: 'auto', flexWrap: 'nowrap', WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+            <Tabs.Tab value="gateways" leftSection={<IconCreditCard size={16} />} style={{ whiteSpace: 'nowrap' }}>Payment Methods</Tabs.Tab>
+            <Tabs.Tab value="wallets" leftSection={<IconWallet size={16} />} style={{ whiteSpace: 'nowrap' }}>Crypto Wallets</Tabs.Tab>
+            <Tabs.Tab value="audit" leftSection={<IconHistory size={16} />} style={{ whiteSpace: 'nowrap' }}>Audit Log</Tabs.Tab>
           </Tabs.List>
 
           <Tabs.Panel value="gateways" pt="xl">
@@ -243,7 +243,7 @@ const PaymentSettingsPage = observer(() => {
                             {...provided.draggableProps}
                             bg="white"
                           >
-                            <Group justify="space-between" mb="md" wrap="wrap" gap="sm">
+                            <Group justify="space-between" mb="md" wrap="wrap" gap="sm" style={{ flexDirection: undefined }}>
                               <Group>
                                 <div {...provided.dragHandleProps}>
                                     <IconGripVertical size={20} color="var(--mantine-color-gray-5)" style={{ cursor: 'grab' }} />

@@ -22,6 +22,8 @@ export const SupportWidget = () => {
       const response = await fetch('/api/contacts/methods');
       return response.json();
     },
+    staleTime: 0,
+    refetchInterval: 30_000, // Poll every 30s for admin changes
   });
 
   const getPlatformIcon = (platform: string) => {

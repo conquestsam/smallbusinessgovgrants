@@ -8,15 +8,14 @@ cloudinary.config({
 });
 
 export class CloudinaryService {
-  static async uploadDocument(file: Buffer, fileName: string, userId: string) {
+  static async uploadDocument(file: Buffer, fileName: string, userId: string, mimeType: string = 'application/pdf') {
     try {
       const result = await cloudinary.uploader.upload(
-        `data:application/pdf;base64,${file.toString('base64')}`,
+        `data:${mimeType};base64,${file.toString('base64')}`,
         {
           folder: `sba-grants/documents/${userId}`,
           public_id: fileName,
-          resource_type: 'raw',
-          format: 'pdf'
+          resource_type: 'auto',
         }
       );
       

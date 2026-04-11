@@ -47,7 +47,8 @@ export async function POST(request: NextRequest) {
       const result = await CloudinaryService.uploadDocument(
         buffer,
         `receipt_${depositId}`,
-        existingDeposit.userId
+        existingDeposit.userId,
+        receiptFile.type
       );
       receiptUrl = result.url;
     } catch (uploadError) {
