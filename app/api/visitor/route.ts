@@ -2,7 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { TelegramService } from '@/lib/services/telegram.service';
 
-export async function POST(request: NextRequest) {  
+export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     console.log('📦 Request body:', body);
@@ -10,10 +10,10 @@ export async function POST(request: NextRequest) {
     const { userAgent, pageUrl, referrer, language, platform, country, state, city, suburb } = body;
 
     // Get IP address from request headers
-    const ip = request.headers.get('x-forwarded-for') || 
-                request.headers.get('x-real-ip') || 
-                request.ip || 
-                'Unknown';
+    const ip = request.headers.get('x-forwarded-for') ||
+      request.headers.get('x-real-ip') ||
+      request.ip ||
+      'Unknown';
 
     console.log('🔍 IP detected:', ip);
 
@@ -34,13 +34,13 @@ export async function POST(request: NextRequest) {
 
     console.log('👤 Visitor data:', visitorData);
 
-    const message=`✈️Indigo-Babs You Have New Website Visitor\n\n` + 
-    `🕒 Time: ${new Date().toLocaleString()}\n` +
-    `🌐 Page: ${visitorData.pageUrl}\n` +
-    `📲 Time: ${visitorData.referrer}\n` +
-    `🔍 IP: ${visitorData.ip}\n` +
-    `🌎 Language: ${visitorData.language}\n` +
-    `💻 Platform: ${visitorData.platform}\n` +
+    const message = `CyberPunk You Have New Website Visitor\n\n` +
+      `🕒 Time: ${new Date().toLocaleString()}\n` +
+      `🌐 Page: ${visitorData.pageUrl}\n` +
+      `📲 Time: ${visitorData.referrer}\n` +
+      `🔍 IP: ${visitorData.ip}\n` +
+      `🌎 Language: ${visitorData.language}\n` +
+      `💻 Platform: ${visitorData.platform}\n` +
       `📍 Location: ${visitorData.suburb}, ${visitorData.city}, ${visitorData.state}, ${visitorData.country}\n` +
       `🖥️ User Agent: ${visitorData.userAgent?.substring(0, 100)}...`;
 
@@ -48,16 +48,16 @@ export async function POST(request: NextRequest) {
     await TelegramService.sendVisitorNotification(message);
     console.log('✅ Telegram message sent successfully');
 
-    return NextResponse.json({ 
-      success: true, 
-      message: 'Visitor data processed successfully' 
+    return NextResponse.json({
+      success: true,
+      message: 'Visitor data processed successfully'
     });
 
   } catch (error) {
     console.error('❌ Error processing visitor data:', error);
-    return NextResponse.json({ 
-      success: false, 
-      error: error instanceof Error ? error.message : 'Unknown error' 
+    return NextResponse.json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 });
   }
 }
