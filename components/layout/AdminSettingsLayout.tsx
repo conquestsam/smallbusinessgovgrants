@@ -1,6 +1,6 @@
 'use client';
 
-import { AppShell, NavLink, Stack, Title, Text, Breadcrumbs, Anchor, Card, Group, Tabs, Divider, Box } from '@mantine/core';
+import { AppShell, NavLink, Stack, Title, Text, Breadcrumbs, Anchor, Card, Group, Tabs, Divider, Box, ScrollArea } from '@mantine/core';
 import { IconSettings, IconCreditCard, IconMessage, IconMail, IconArrowLeft } from '@tabler/icons-react';
 import { usePathname, useRouter } from 'next/navigation';
 import { DashboardLayout } from './DashboardLayout';
@@ -54,10 +54,37 @@ export const AdminSettingsLayout = ({ children, activeTab }: AdminSettingsLayout
           </Stack>
         </Group>
 
-        <Divider mb="xl" />
+        <Divider mb="lg" />
+
+        {/* MOBILE NAVIGATION BAR (Shown only on small screens) */}
+        <Box hiddenFrom="md" mb="md">
+          <ScrollArea scrollbarSize={2}>
+            <Tabs 
+              variant="outline" 
+              value={pathname} 
+              onChange={(value) => value && router.push(value)}
+              styles={{
+                tab: { padding: '8px 16px', fontWeight: 600 },
+                list: { borderBottom: 'none' }
+              }}
+            >
+              <Tabs.List style={{ flexWrap: 'nowrap' }}>
+                {menuItems.map((item) => (
+                  <Tabs.Tab 
+                    key={item.href} 
+                    value={item.href}
+                    leftSection={<item.icon size={16} />}
+                  >
+                    {item.label}
+                  </Tabs.Tab>
+                ))}
+              </Tabs.List>
+            </Tabs>
+          </ScrollArea>
+        </Box>
 
         <Group align="flex-start" gap="xl" style={{ flexWrap: 'nowrap' }}>
-          {/* PERSISTENT LEFT SIDEBAR FOR SETTINGS */}
+          {/* PERSISTENT LEFT SIDEBAR FOR SETTINGS (Shown only on desktop) */}
           <Stack w={280} gap="xs" visibleFrom="md" style={{ flexShrink: 0 }}>
             <Text size="xs" fw={700} tt="uppercase" c="dimmed" mb={4}>
               Sections

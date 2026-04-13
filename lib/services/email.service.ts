@@ -68,12 +68,19 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 // [WHY] Gmail SMTP transporter factory — created lazily, only when Resend fails
 const getGmailTransporter = () => {
   const user = process.env.GMAIL_USER;
-  const pass = process.env.GMAIL_APP_PASSWORD;
+  // [WHY] Trim spaces from app password to handle common copy-paste formatting issues
+  const pass = process.env.GMAIL_APP_PASSWORD?.replace(/\s+/g, '');
+  
   if (!user || !pass || user === 'your-email@gmail.com') {
     return null;
   }
+  
+  // [WHY] Use explicit SMTP config (host/port/secure) instead of 'service: gmail' 
+  // for better compatibility with server environments like AWS/Vercel
   return nodemailer.createTransport({
-    service: 'gmail',
+    host: 'smtp.gmail.com',
+    port: 465,
+    secure: true, // true for 465, false for other ports
     auth: { user, pass },
   });
 };
@@ -82,7 +89,7 @@ export class EmailService {
 
   /**
    * [WHY] Centralized email dispatch — tries Resend first, falls back to Gmail SMTP.
-   * This ensures emails are delivered even when one provider has outages or quota issues.
+   * This ensures emails are delivered even when one provider has unverified domains or limits.
    */
   private static async sendEmailWithFallback(options: {
     to: string;
@@ -102,8 +109,8 @@ export class EmailService {
       });
       console.log(`[EmailService] ✅ Sent via Resend to ${options.to}`);
       return;
-    } catch (resendError) {
-      console.warn(`[EmailService] ⚠️ Resend failed for ${options.to}:`, resendError);
+    } catch (resendError: any) {
+      console.warn(`[EmailService] ⚠️ Resend failed for ${options.to}:`, resendError?.message || resendError);
     }
 
     // --- Attempt 2: Gmail SMTP fallback ---
@@ -121,8 +128,12 @@ export class EmailService {
         html: options.html,
       });
       console.log(`[EmailService] ✅ Sent via Gmail SMTP fallback to ${options.to}`);
-    } catch (gmailError) {
-      console.error(`[EmailService] ❌ Both Resend and Gmail failed for ${options.to}:`, gmailError);
+    } catch (gmailError: any) {
+      console.error(`[EmailService] ❌ Both Resend and Gmail failed for ${options.to}:`, {
+        message: gmailError?.message,
+        code: gmailError?.code,
+        response: gmailError?.response
+      });
     }
   }
 
