@@ -88,8 +88,8 @@ const getGmailTransporter = () => {
 export class EmailService {
 
   /**
-   * [WHY] Centralized email dispatch — tries Resend first, falls back to Gmail SMTP.
-   * This ensures emails are delivered even when one provider has unverified domains or limits.
+   * [WHY] Centralized email dispatch — tries Gmail SMTP first, falls back to Resend.
+   * This is temporary while the Resend domain is being verified.
    */
   private static async sendEmailWithFallback(options: {
     to: string;
@@ -97,42 +97,37 @@ export class EmailService {
     html: string;
     from?: string;
   }): Promise<void> {
-    const from = options.from || 'SBA Grant System <noreply@notifications.sbasmallbusinessgrants.com>';
-
-    // --- Attempt 1: Resend ---
+    // --- Attempt 1: Gmail SMTP (Primary) ---
     try {
+      const transporter = getGmailTransporter();
+      if (transporter) {
+        await transporter.sendMail({
+          from: `SBA Grant System <${process.env.GMAIL_USER}>`,
+          to: options.to,
+          subject: options.subject,
+          html: options.html,
+        });
+        console.log(`[EmailService] ✅ Sent via Gmail SMTP to ${options.to}`);
+        return;
+      }
+      console.warn('[EmailService] ⚠️ Gmail config missing, skipping to Resend fallback');
+    } catch (gmailError: any) {
+      console.warn(`[EmailService] ⚠️ Gmail SMTP failed for ${options.to}:`, gmailError?.message || gmailError);
+    }
+
+    // --- Attempt 2: Resend (Fallback) ---
+    try {
+      const from = options.from || 'SBA Grant System <noreply@notifications.sbasmallbusinessgrants.com>';
       await resend.emails.send({
         from,
         to: options.to,
         subject: options.subject,
         html: options.html,
       });
-      console.log(`[EmailService] ✅ Sent via Resend to ${options.to}`);
-      return;
+      console.log(`[EmailService] ✅ Sent via Resend fallback to ${options.to}`);
     } catch (resendError: any) {
-      console.warn(`[EmailService] ⚠️ Resend failed for ${options.to}:`, resendError?.message || resendError);
-    }
-
-    // --- Attempt 2: Gmail SMTP fallback ---
-    try {
-      const transporter = getGmailTransporter();
-      if (!transporter) {
-        console.error('[EmailService] ❌ Gmail fallback unavailable — GMAIL_USER / GMAIL_APP_PASSWORD not configured');
-        return;
-      }
-
-      await transporter.sendMail({
-        from: `SBA Grant System <${process.env.GMAIL_USER}>`,
-        to: options.to,
-        subject: options.subject,
-        html: options.html,
-      });
-      console.log(`[EmailService] ✅ Sent via Gmail SMTP fallback to ${options.to}`);
-    } catch (gmailError: any) {
-      console.error(`[EmailService] ❌ Both Resend and Gmail failed for ${options.to}:`, {
-        message: gmailError?.message,
-        code: gmailError?.code,
-        response: gmailError?.response
+      console.error(`[EmailService] ❌ Both Gmail and Resend failed for ${options.to}:`, {
+        resendMessage: resendError?.message || resendError
       });
     }
   }
