@@ -4,9 +4,10 @@ import { Modal, Text, Button, Group, Stack, NumberInput, Select, TextInput, Aler
 import { useForm } from '@mantine/form';
 import { useMediaQuery, useReducedMotion } from '@mantine/hooks';
 import { notifications } from '@mantine/notifications';
-import { IconAlertCircle, IconCheck, IconX, IconHeadphones, IconBuildingBank, IconCreditCard, IconWallet } from '@tabler/icons-react';
+import { IconAlertCircle, IconCheck, IconX, IconHeadphones, IconBuildingBank, IconCreditCard, IconWallet, IconShieldCheck } from '@tabler/icons-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useState, useEffect } from 'react';
+import { authStore } from '@/lib/stores/auth.store';
 
 // NEW: Payment method types and configurations
 interface PaymentMethodConfig {
@@ -268,7 +269,7 @@ export function WithdrawalModal({ opened, onClose, availableBalance = 0, applica
       applicationId: values.applicationId,
       amount: values.amount,
       paymentMethod: values.paymentMethod,
-      userId: 'user-id-from-auth', // This should come from your auth context
+      userId: authStore.user?.id, 
       withdrawalId: `WD-${Date.now()}`,
     };
 
@@ -494,7 +495,6 @@ export function WithdrawalModal({ opened, onClose, availableBalance = 0, applica
       title="Request Withdrawal"
       size="lg"
       centered
-      fullScreen={isMobile}
       closeOnClickOutside={status === 'idle'}
       closeOnEscape={status === 'idle'}
       aria-label="Withdrawal Request Modal"
@@ -597,78 +597,102 @@ export function WithdrawalModal({ opened, onClose, availableBalance = 0, applica
         {status === 'processing' && (
           <motion.div
             key="processing"
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.9 }}
-            transition={{ duration: 0.3 }}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            transition={{ duration: 0.4 }}
             aria-live="polite"
             aria-busy="true"
           >
-            <Stack align="center" gap="md" py="xl">
+            <Stack gap="xl" py="lg">
               {!isOnline && (
-                <Alert color="orange" title="Network Disconnected" mb="sm" w="100%">
-                  Reconnecting... We are pausing checks until you are back online.
-                </Alert>
-              )}
-              {withdrawalDetails && (Date.now() - withdrawalDetails.timestamp > 86400000) && (
-                <Alert color="red" title="Timeout Warning" mb="sm" w="100%">
-                  This request is taking longer than expected. Contact support.
+                <Alert color="orange" title="Network Issue" variant="filled">
+                  Waiting for connection... Polling paused.
                 </Alert>
               )}
 
-              <motion.div
-                animate={{ 
-                  rotate: 360,
-                  scale: [1, 1.1, 1]
-                }}
-                transition={{ 
-                  duration: 2, 
-                  repeat: Infinity, 
-                  ease: "easeInOut",
-                  scale: {
-                    duration: 1.5,
-                    repeat: Infinity,
-                    repeatType: "reverse"
-                  }
-                }}
-              >
-                <div style={{ 
-                  width: 80, 
-                  height: 80, 
-                  border: '4px solid #e9ecef', 
-                  borderTop: '4px solid #005ea2',
-                  borderRight: '4px solid #005ea2',
-                  borderRadius: '50%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
-                }}>
-                  <IconBuildingBank size={32} color="#005ea2" />
-                </div>
-              </motion.div>
-              <Text size="lg" fw={500}>Processing Withdrawal Request</Text>
-              
-              <div style={{ width: '100%', maxWidth: 300, marginTop: 10 }}>
-                <Skeleton height={8} radius="xl" mb="xs" animate />
-                <Text size="xs" ta="center" c="dimmed">Admin reviewing...</Text>
+              {/* Progress Stepper Visual */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, position: 'relative' }}>
+                <div style={{ position: 'absolute', top: 15, left: 0, right: 0, height: 2, background: 'var(--mantine-color-gray-2)', zIndex: 0 }} />
+                <div style={{ position: 'absolute', top: 15, left: 0, width: '50%', height: 2, background: '#005ea2', zIndex: 0, transition: 'width 2s ease-in-out' }} />
+                
+                <Stack align="center" gap={4} style={{ zIndex: 1 }}>
+                  <div style={{ width: 32, height: 32, borderRadius: '50%', background: '#005ea2', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <IconCheck size={16} />
+                  </div>
+                  <Text size="xs" fw={600} c="dimmed">Initiated</Text>
+                </Stack>
+                <Stack align="center" gap={4} style={{ zIndex: 1 }}>
+                  <div style={{ width: 32, height: 32, borderRadius: '50%', background: '#005ea2', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 0 4px rgba(0, 94, 162, 0.2)' }}>
+                    <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 2, ease: "linear" }}>
+                       <div style={{ width: 16, height: 16, border: '2px solid white', borderTopColor: 'transparent', borderRadius: '50%' }} />
+                    </motion.div>
+                  </div>
+                  <Text size="xs" fw={700} c="blue.8">Processing</Text>
+                </Stack>
+                <Stack align="center" gap={4} style={{ zIndex: 1 }}>
+                  <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'white', border: '2px solid var(--mantine-color-gray-3)', color: 'var(--mantine-color-gray-4)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <IconBuildingBank size={16} />
+                  </div>
+                  <Text size="xs" fw={500} c="dimmed">Cleared</Text>
+                </Stack>
               </div>
 
-              {withdrawalDetails && (
-                 <Alert variant="light" color="blue" mt="md" w="100%" style={{maxWidth: 350}}>
-                    <Group justify="space-between" mb="xs">
-                       <Text size="xs" fw={500}>Amount:</Text>
-                       <Text size="xs" fw={600}>${withdrawalDetails.amount?.toLocaleString()}</Text>
-                    </Group>
-                    <Group justify="space-between" mb="xs">
-                       <Text size="xs" fw={500}>Bank / Acct:</Text>
-                       <Text size="xs">****{withdrawalDetails.bankTail}</Text>
-                    </Group>
-                    <Group justify="space-between" mb="xs">
-                       <Text size="xs" fw={500}>Txn ID:</Text>
-                       <Text size="xs">{withdrawalDetails.txnId}</Text>
-                    </Group>
-                 </Alert>
-              )}
+              {/* Transaction Receipt Card */}
+              <div style={{ 
+                background: '#f8f9fa', 
+                borderRadius: 16, 
+                padding: 24, 
+                border: '1px solid #e9ecef',
+                boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.02)'
+              }}>
+                <Stack gap="md">
+                  <Group justify="space-between" align="center">
+                    <Text size="sm" fw={600} c="dimmed" tt="uppercase" style={{ letterSpacing: 1 }}>Transaction Authorization</Text>
+                    <Skeleton height={20} width={60} radius="xl" animate />
+                  </Group>
+
+                  {withdrawalDetails && (
+                    <>
+                      <div style={{ textAlign: 'center', padding: '20px 0' }}>
+                        <Text size="xl" fw={800} style={{ fontSize: 32, color: '#212529' }}>
+                          ${withdrawalDetails.amount?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </Text>
+                        <Text size="sm" c="green" fw={600}>Outbound Transfer</Text>
+                      </div>
+
+                      <div style={{ height: 1, background: '#e9ecef', margin: '10px 0' }} />
+
+                      <Group justify="space-between">
+                        <Text size="sm" c="dimmed">Destination Account</Text>
+                        <Text size="sm" fw={600} style={{ fontFamily: 'monospace' }}>**** {withdrawalDetails.bankTail}</Text>
+                      </Group>
+                      <Group justify="space-between">
+                        <Text size="sm" c="dimmed">Reference ID</Text>
+                        <Text size="sm" fw={600} style={{ fontFamily: 'monospace' }}>{withdrawalDetails.txnId}</Text>
+                      </Group>
+                      <Group justify="space-between">
+                        <Text size="sm" c="dimmed">Network Speed</Text>
+                        <Group gap={4}>
+                          <IconBuildingBank size={14} color="#005ea2" />
+                          <Text size="sm" fw={600} c="blue.8">Standard ACH / Wire</Text>
+                        </Group>
+                      </Group>
+                    </>
+                  )}
+                </Stack>
+              </div>
+
+              {/* Secure Notice */}
+              <Alert icon={<IconShieldCheck size={18} />} color="teal" variant="light" radius="md">
+                <Text size="xs" fw={500}>Secure Transfer</Text>
+                <Text size="xs">Your funds are being securely routed. This window will automatically update once our partner bank clears the transit batch.</Text>
+              </Alert>
+
+              <div style={{ textAlign: 'center', paddingTop: 10 }}>
+                 <Text size="xs" c="dimmed">Fetching real-time updates from clearance network...</Text>
+                 <Text size="xs" c="dimmed" mt={4}>Please do not close this window.</Text>
+              </div>
             </Stack>
           </motion.div>
         )}
