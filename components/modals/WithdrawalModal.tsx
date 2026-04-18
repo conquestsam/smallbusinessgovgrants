@@ -31,8 +31,8 @@ const Confetti = ({ amount }: { amount: number }) => {
   if (reduceMotion) return null;
 
   const isPremium = amount > 1000;
-  const colors = isPremium 
-    ? ['#FFD700', '#C0C0C0', '#CD7F32', '#FFF5EE', '#F5F5DC'] 
+  const colors = isPremium
+    ? ['#FFD700', '#C0C0C0', '#CD7F32', '#FFF5EE', '#F5F5DC']
     : ['#ffc0cb', '#87ceeb', '#98fb98', '#ffd700', '#dda0dd'];
 
   return (
@@ -94,7 +94,7 @@ export function WithdrawalModal({ opened, onClose, availableBalance = 0, applica
     try {
       const audio = new Audio(`/sounds/${type}.mp3`);
       audio.play().catch(e => console.log('Audio playback prevented or missing asset', e));
-    } catch (e) {}
+    } catch (e) { }
   };
 
   useEffect(() => {
@@ -116,9 +116,9 @@ export function WithdrawalModal({ opened, onClose, availableBalance = 0, applica
 
     const poll = async () => {
       if (status !== 'processing' || !currentWithdrawalId) return;
-      
+
       const isTimeout = withdrawalDetails && (Date.now() - withdrawalDetails.timestamp > 86400000);
-      
+
       if (!isOnline || isTimeout) {
         if (isActive) timeoutId = setTimeout(poll, currentInterval);
         return;
@@ -126,10 +126,10 @@ export function WithdrawalModal({ opened, onClose, availableBalance = 0, applica
 
       try {
         const res = await fetch(`/api/withdrawals/${currentWithdrawalId}`);
-        
+
         if (res.status === 401 || res.status === 403) {
-           window.location.href = '/login?returnUrl=/withdrawals';
-           return;
+          window.location.href = '/login?returnUrl=/withdrawals';
+          return;
         }
 
         if (res.ok) {
@@ -163,7 +163,7 @@ export function WithdrawalModal({ opened, onClose, availableBalance = 0, applica
     if (status === 'processing' && currentWithdrawalId) {
       timeoutId = setTimeout(poll, currentInterval);
     }
-    
+
     return () => {
       isActive = false;
       if (timeoutId) clearTimeout(timeoutId);
@@ -238,25 +238,25 @@ export function WithdrawalModal({ opened, onClose, availableBalance = 0, applica
       additionalInfo: {} as Record<string, any>
     },
     validate: {
-  amount: (value: number, values: any) => {
-    const selectedApp = applicationOptions.find(app => app.value === values.applicationId);
-    const balance = selectedApp ? selectedApp.availableAmount : availableBalance;
-    if (value <= 0) return 'Amount must be greater than 0';
-    if (value > balance) return 'Amount exceeds available balance';
-    return null;
-  },
-  paymentMethod: (value: string) => !value ? 'Please select a payment method' : null,
-  // FIXED: Add types for both value and values parameters
-  bankName: (value: string, values: any) => 
-    (values.paymentMethod === 'bank_transfer' || values.paymentMethod === 'wire_transfer') && !value ? 'Bank name is required' : null,
-  accountNumber: (value: string, values: any) => 
-    (values.paymentMethod === 'bank_transfer' || values.paymentMethod === 'wire_transfer') && !value ? 'Account number is required' : null,
-  accountHolderName: (value: string, values: any) => 
-    (values.paymentMethod === 'bank_transfer' || values.paymentMethod === 'wire_transfer') && !value ? 'Account holder name is required' : null,
-  routingNumber: (value: string, values: any) => 
-    (values.paymentMethod === 'bank_transfer' || values.paymentMethod === 'wire_transfer') && !value ? 'Routing number is required' : 
-    (values.paymentMethod === 'bank_transfer' || values.paymentMethod === 'wire_transfer') && !/^\d{9}$/.test(value) ? 'Routing number must be 9 digits' : null,
-},
+      amount: (value: number, values: any) => {
+        const selectedApp = applicationOptions.find(app => app.value === values.applicationId);
+        const balance = selectedApp ? selectedApp.availableAmount : availableBalance;
+        if (value <= 0) return 'Amount must be greater than 0';
+        if (value > balance) return 'Amount exceeds available balance';
+        return null;
+      },
+      paymentMethod: (value: string) => !value ? 'Please select a payment method' : null,
+      // FIXED: Add types for both value and values parameters
+      bankName: (value: string, values: any) =>
+        (values.paymentMethod === 'bank_transfer' || values.paymentMethod === 'wire_transfer') && !value ? 'Bank name is required' : null,
+      accountNumber: (value: string, values: any) =>
+        (values.paymentMethod === 'bank_transfer' || values.paymentMethod === 'wire_transfer') && !value ? 'Account number is required' : null,
+      accountHolderName: (value: string, values: any) =>
+        (values.paymentMethod === 'bank_transfer' || values.paymentMethod === 'wire_transfer') && !value ? 'Account holder name is required' : null,
+      routingNumber: (value: string, values: any) =>
+        (values.paymentMethod === 'bank_transfer' || values.paymentMethod === 'wire_transfer') && !value ? 'Routing number is required' :
+          (values.paymentMethod === 'bank_transfer' || values.paymentMethod === 'wire_transfer') && !/^\d{9}$/.test(value) ? 'Routing number must be 9 digits' : null,
+    },
   });
 
   // FIXED: Handle payment method change - now accepts string | null
@@ -279,7 +279,7 @@ export function WithdrawalModal({ opened, onClose, availableBalance = 0, applica
       applicationId: values.applicationId,
       amount: values.amount,
       paymentMethod: values.paymentMethod,
-      userId: authStore.user?.id, 
+      userId: authStore.user?.id,
       withdrawalId: `WD-${Date.now()}`,
     };
 
@@ -299,7 +299,7 @@ export function WithdrawalModal({ opened, onClose, availableBalance = 0, applica
         ...basePayload,
         bankName: `${values.paymentMethod.toUpperCase()} Transfer`,
         accountNumber: 'N/A',
-        routingNumber: 'N/A', 
+        routingNumber: 'N/A',
         accountHolderName: 'N/A',
         additionalInfo: values.additionalInfo
       };
@@ -311,10 +311,10 @@ export function WithdrawalModal({ opened, onClose, availableBalance = 0, applica
       setLoading(true);
       setStatus('processing');
       setErrorMessage('');
-      
+
       // FIXED: Clean the payload before sending
       const cleanData = cleanPayload(values);
-      
+
       console.log('Sending clean payload:', cleanData);
 
       const response = await fetch('/api/withdrawals', {
@@ -331,18 +331,18 @@ export function WithdrawalModal({ opened, onClose, availableBalance = 0, applica
       }
 
       const result = await response.json();
-      
+
       // Instead of success, we wait in processing state until admin approval
       if (result.withdrawal && result.withdrawal.withdrawalId) {
         setCurrentWithdrawalId(result.withdrawal.withdrawalId);
         setWithdrawalDetails({
-           amount: cleanData.amount,
-           bankTail: cleanData.accountNumber !== 'N/A' ? cleanData.accountNumber.slice(-4) : 'N/A',
-           timestamp: Date.now(),
-           txnId: result.withdrawal.withdrawalId
+          amount: cleanData.amount,
+          bankTail: cleanData.accountNumber !== 'N/A' ? cleanData.accountNumber.slice(-4) : 'N/A',
+          timestamp: Date.now(),
+          txnId: result.withdrawal.withdrawalId
         });
       }
-      
+
     } catch (error: any) {
       setStatus('error');
       setErrorMessage(error.message || 'Withdrawal request failed');
@@ -515,7 +515,7 @@ export function WithdrawalModal({ opened, onClose, availableBalance = 0, applica
       aria-label="Withdrawal Request Modal"
     >
       <LoadingOverlay visible={loading && status === 'processing'} />
-      
+
       <AnimatePresence mode="wait">
         {status === 'idle' && (
           <motion.div
@@ -526,91 +526,89 @@ export function WithdrawalModal({ opened, onClose, availableBalance = 0, applica
             transition={{ duration: 0.3 }}
           >
             <ScrollArea.Autosize mah="75vh" offsetScrollbars>
-            <form onSubmit={withdrawalForm.onSubmit(handleSubmit)}>
-              <Stack gap="md" px="xs" pb="md">
-                {/* Available Balance Display */}
-                {/* Application Selection (Updates dynamically if not pre-populated) */}
-                <Select
-                  label="Select Application"
-                  placeholder="Choose approved application"
-                  required
-                  comboboxProps={{ withinPortal: true }}
-                  data={applicationOptions}
-                  {...withdrawalForm.getInputProps('applicationId')}
-                />
-                
-                {/* Dynamic Balance Display */}
-                {withdrawalForm.values.applicationId && (
-                  <Alert color="blue" variant="light">
-                    <Text size="sm">
-                      Available Balance:{' '}
-                      <Text component="span" fw={600} c="blue">
-                        ${(
-                          applicationOptions.find(
-                            app => app.value === withdrawalForm.values.applicationId
-                          )?.availableAmount || 0
-                        ).toLocaleString()}
+              <form onSubmit={withdrawalForm.onSubmit(handleSubmit)}>
+                <Stack gap="md" px="xs" pb="md">
+                  {/* Available Balance Display */}
+                  {/* Application Selection (Updates dynamically if not pre-populated) */}
+                  <Select
+                    label="Select Application"
+                    placeholder="Choose approved application"
+                    required
+                    comboboxProps={{ withinPortal: true }}
+                    data={applicationOptions}
+                    {...withdrawalForm.getInputProps('applicationId')}
+                  />
+
+                  {/* Dynamic Balance Display */}
+                  {withdrawalForm.values.applicationId && (
+                    <Alert color="blue" variant="light">
+                      <Text size="sm">
+                        Available Balance:{' '}
+                        <Text component="span" fw={600} c="blue">
+                          ${(
+                            applicationOptions.find(
+                              app => app.value === withdrawalForm.values.applicationId
+                            )?.availableAmount || 0
+                          ).toLocaleString()}
+                        </Text>
                       </Text>
-                    </Text>
-                  </Alert>
-                )}
+                    </Alert>
+                  )}
 
-                {/* Amount Input */}
-                <NumberInput
-                  label="Withdrawal Amount"
-                  placeholder="Enter amount"
-                  min={1}
-                  max={
-                    applicationOptions.find(
-                      app => app.value === withdrawalForm.values.applicationId
-                    )?.availableAmount || availableBalance
-                  }
-                  prefix="$"
-                  thousandSeparator=","
-                  required
-                  {...withdrawalForm.getInputProps('amount')}
-                />
+                  {/* Amount Input */}
+                  <NumberInput
+                    label="Withdrawal Amount"
+                    placeholder="Enter amount"
+                    min={1}
+                    max={
+                      applicationOptions.find(
+                        app => app.value === withdrawalForm.values.applicationId
+                      )?.availableAmount || availableBalance
+                    }
+                    prefix="$"
+                    thousandSeparator=","
+                    required
+                    {...withdrawalForm.getInputProps('amount')}
+                  />
 
-                {/* Payment Method Selection */}
-                <Select
-                  label="Payment Method"
-                  placeholder="Select payment method"
-                  required
-                  comboboxProps={{ withinPortal: true }}
-                  data={paymentMethods.map(method => ({
-                    value: method.value,
-                    label: method.label,
-                  }))}
-                  onChange={handlePaymentMethodChange}
-                  value={selectedPaymentMethod}
-                />
+                  {/* Payment Method Selection */}
+                  <Select
+                    label="Payment Method"
+                    placeholder="Select payment method"
+                    required
+                    comboboxProps={{ withinPortal: true }}
+                    data={paymentMethods.map(method => ({
+                      value: method.value,
+                      label: method.label,
+                    }))}
+                    onChange={handlePaymentMethodChange}
+                    value={selectedPaymentMethod}
+                  />
 
-                {/* Payment Method Description */}
-                {getCurrentPaymentMethod() && (
-                  <Alert color="blue" variant="light">
-                    <Text size="sm">{getCurrentPaymentMethod()?.description}</Text>
-                  </Alert>
-                )}
+                  {/* Payment Method Description */}
+                  {getCurrentPaymentMethod() && (
+                    <Alert color="blue" variant="light">
+                      <Text size="sm">{getCurrentPaymentMethod()?.description}</Text>
+                    </Alert>
+                  )}
 
-                {/* Dynamic Payment Method Fields */}
-                {renderPaymentMethodFields()}
+                  {/* Dynamic Payment Method Fields */}
+                  {renderPaymentMethodFields()}
 
-                <Group justify="flex-end" mt="md">
-                  <Button variant="outline" color="gray" onClick={onClose}>
-                    Cancel
-                  </Button>
-                  <Button 
-                    type="submit" 
-                    variant="filled"
-                    style={{ backgroundColor: '#005ea2', color: 'white' }}
-                    disabled={!selectedPaymentMethod}
-                    size="md"
-                  >
-                    Submit Request
-                  </Button>
-                </Group>
-              </Stack>
-            </form>
+                  <Group justify="flex-end" mt="md">
+                    <Button variant="outline" color="gray" onClick={onClose}>
+                      Cancel
+                    </Button>
+                    <Button
+                      type="submit"
+                      color="primary"
+                      disabled={!selectedPaymentMethod}
+                    >
+                      Submit Request
+                    </Button>
+                  </Group>
+                </Stack>
+              </form>
             </ScrollArea.Autosize>
           </motion.div>
         )}
@@ -636,7 +634,7 @@ export function WithdrawalModal({ opened, onClose, availableBalance = 0, applica
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, position: 'relative' }}>
                 <div style={{ position: 'absolute', top: 15, left: 0, right: 0, height: 2, background: 'var(--mantine-color-gray-2)', zIndex: 0 }} />
                 <div style={{ position: 'absolute', top: 15, left: 0, width: '50%', height: 2, background: '#005ea2', zIndex: 0, transition: 'width 2s ease-in-out' }} />
-                
+
                 <Stack align="center" gap={4} style={{ zIndex: 1 }}>
                   <div style={{ width: 32, height: 32, borderRadius: '50%', background: '#005ea2', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <IconCheck size={16} />
@@ -646,7 +644,7 @@ export function WithdrawalModal({ opened, onClose, availableBalance = 0, applica
                 <Stack align="center" gap={4} style={{ zIndex: 1 }}>
                   <div style={{ width: 32, height: 32, borderRadius: '50%', background: '#005ea2', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 0 4px rgba(0, 94, 162, 0.2)' }}>
                     <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 2, ease: "linear" }}>
-                       <div style={{ width: 16, height: 16, border: '2px solid white', borderTopColor: 'transparent', borderRadius: '50%' }} />
+                      <div style={{ width: 16, height: 16, border: '2px solid white', borderTopColor: 'transparent', borderRadius: '50%' }} />
                     </motion.div>
                   </div>
                   <Text size="xs" fw={700} c="blue.8">Processing</Text>
@@ -660,10 +658,10 @@ export function WithdrawalModal({ opened, onClose, availableBalance = 0, applica
               </div>
 
               {/* Transaction Receipt Card */}
-              <div style={{ 
-                background: '#f8f9fa', 
-                borderRadius: 16, 
-                padding: 24, 
+              <div style={{
+                background: '#f8f9fa',
+                borderRadius: 16,
+                padding: 24,
                 border: '1px solid #e9ecef',
                 boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.02)'
               }}>
@@ -711,8 +709,8 @@ export function WithdrawalModal({ opened, onClose, availableBalance = 0, applica
               </Alert>
 
               <div style={{ textAlign: 'center', paddingTop: 10 }}>
-                 <Text size="xs" c="dimmed">Fetching real-time updates from clearance network...</Text>
-                 <Text size="xs" c="dimmed" mt={4}>Please do not close this window.</Text>
+                <Text size="xs" c="dimmed">Fetching real-time updates from clearance network...</Text>
+                <Text size="xs" c="dimmed" mt={4}>Please do not close this window.</Text>
               </div>
             </Stack>
           </motion.div>
@@ -732,9 +730,9 @@ export function WithdrawalModal({ opened, onClose, availableBalance = 0, applica
               <motion.div
                 initial={{ scale: 0, rotate: -180 }}
                 animate={{ scale: 1, rotate: 0 }}
-                transition={{ 
-                  delay: 0.2, 
-                  type: "spring", 
+                transition={{
+                  delay: 0.2,
+                  type: "spring",
                   stiffness: 200,
                   rotate: { duration: 0.8, ease: "easeOut" }
                 }}
@@ -758,25 +756,23 @@ export function WithdrawalModal({ opened, onClose, availableBalance = 0, applica
                   </motion.div>
                 </div>
               </motion.div>
-              
+
               <Text size="xl" fw={600} c="green">Withdrawal Approved!</Text>
               <Text size="sm" c="dimmed" ta="center">
                 Withdrawal approved! Funds may take up to 48 hours (2-3 business days) to reflect in your account depending on your bank&apos;s processing time.
               </Text>
-              
+
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.8 }}
               >
-                <Button 
+                <Button
                   onClick={() => {
                     resetModal();
                     onClose();
                   }}
-                  variant="filled"
-                  style={{ backgroundColor: '#005ea2', color: 'white' }}
-                  size="md"
+                  color="primary"
                 >
                   Done
                 </Button>
@@ -814,9 +810,9 @@ export function WithdrawalModal({ opened, onClose, availableBalance = 0, applica
                   <IconX size={40} color="#ff6b6b" />
                 </div>
               </motion.div>
-              
-              <Text size="xl" fw={800} c="#212529" mt="sm">Withdrawal Failed</Text>
-              
+
+              <Text size="xl" fw={800} c="#212529" mt="sm">Payment Failed</Text>
+
               <Alert color="red" variant="light" style={{ border: '1px solid #ffc9c9', width: '100%' }}>
                 <Group gap="xs" mb="xs">
                   <IconAlertCircle size={18} />
@@ -824,28 +820,26 @@ export function WithdrawalModal({ opened, onClose, availableBalance = 0, applica
                 </Group>
                 <Text size="sm" mb="xs">Fund deposit failed this time. Please contact support for withdrawal processing. {errorMessage}</Text>
                 <div style={{ padding: '8px 12px', background: 'rgba(255,255,255,0.6)', borderRadius: 4, marginTop: 8 }}>
-                  <Text size="xs" fw={700} c="dimmed">ERROR_CODE: SEC_AUTH_FAILED</Text>
+                  {/* <Text size="xs" fw={700} c="dimmed">ERROR_CODE: SEC_AUTH_FAILED</Text> */}
                 </div>
               </Alert>
 
               <Group mt="md" grow w="100%">
                 <Button
                   leftSection={<IconHeadphones size={18} />}
-                  variant="filled"
-                  style={{ backgroundColor: '#005ea2', color: 'white' }}
+                  color="dark"
                   size="md"
                   onClick={handleContactWhatsApp}
                 >
-                  Contact Support 
+                  Contact Support
                 </Button>
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   color="gray"
                   size="md"
                   onClick={resetModal}
-                  style={{ borderWidth: 2 }}
                 >
-                  Dismiss
+                  Close
                 </Button>
               </Group>
             </Stack>
@@ -885,18 +879,12 @@ export function WithdrawalModal({ opened, onClose, availableBalance = 0, applica
               {/* FIXED: Also changed error state support button */}
               <Button
                 leftSection={<IconHeadphones size={16} />}
-                variant="filled"
-                style={{ backgroundColor: '#005ea2', color: 'white' }}
+                color="blue"
                 onClick={handleContactSupport}
               >
                 Contact Support
               </Button>
-              <Button 
-                variant="outline" 
-                color="gray" 
-                onClick={resetModal}
-                style={{ borderWidth: 2 }}
-              >
+              <Button variant="outline" color="gray" onClick={resetModal}>
                 Try Again
               </Button>
             </Stack>
