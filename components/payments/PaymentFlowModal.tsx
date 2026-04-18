@@ -595,7 +595,7 @@ export const PaymentFlowModal = ({ opened, onClose, method, wallets }: PaymentFl
         </Button>
       )}
       
-      <Button variant="subtle" color="gray" onClick={() => setStep('details')}>← Back to Payment Details</Button>
+      <Button variant="outline" color="gray" onClick={() => setStep('details')} style={{ borderWidth: 2 }}>← Back to Payment Details</Button>
     </Stack>
   );
 
@@ -624,8 +624,8 @@ export const PaymentFlowModal = ({ opened, onClose, method, wallets }: PaymentFl
 
       <Badge size="lg" variant="light" color="green">Verification in Progress</Badge>
 
-      <Button fullWidth size="lg" variant="light" onClick={onClose}
-        style={{ color: '#005ea2' }}
+      <Button fullWidth size="lg" variant="filled" onClick={onClose}
+        style={{ backgroundColor: '#005ea2', color: 'white' }}
       >
         Return to Dashboard
       </Button>
@@ -655,7 +655,7 @@ export const PaymentFlowModal = ({ opened, onClose, method, wallets }: PaymentFl
 
       <Badge size="lg" variant="light" color="red">Unsuccessful Deposit</Badge>
 
-      <Button fullWidth size="lg" variant="light" color="red" onClick={onClose}>
+      <Button fullWidth size="lg" variant="filled" color="red" onClick={onClose} style={{ backgroundColor: '#e03131' }}>
         Close & Try Again
       </Button>
     </Stack>
