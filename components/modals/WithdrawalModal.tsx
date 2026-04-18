@@ -1,7 +1,8 @@
 'use client';
 
-import { Modal, Text, Button, Group, Stack, NumberInput, Select, TextInput, Alert, LoadingOverlay } from '@mantine/core';
+import { Modal, Text, Button, Group, Stack, NumberInput, Select, TextInput, Alert, LoadingOverlay, Skeleton } from '@mantine/core';
 import { useForm } from '@mantine/form';
+import { useMediaQuery, useReducedMotion } from '@mantine/hooks';
 import { notifications } from '@mantine/notifications';
 import { IconAlertCircle, IconCheck, IconX, IconHeadphones, IconBuildingBank, IconCreditCard, IconWallet } from '@tabler/icons-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -19,15 +20,21 @@ interface PaymentMethodConfig {
 interface WithdrawalModalProps {
   opened: boolean;
   onClose: () => void;
-  availableBalance: number;
-  onSubmit: (data: any) => Promise<void>;
+  availableBalance?: number; // Kept as fallback
   applicationOptions: { value: string; label: string; availableAmount: number }[];
-  form: any;
 }
 
-const Confetti = () => {
+const Confetti = ({ amount }: { amount: number }) => {
+  const reduceMotion = useReducedMotion();
+  if (reduceMotion) return null;
+
+  const isPremium = amount > 1000;
+  const colors = isPremium 
+    ? ['#FFD700', '#C0C0C0', '#CD7F32', '#FFF5EE', '#F5F5DC'] 
+    : ['#ffc0cb', '#87ceeb', '#98fb98', '#ffd700', '#dda0dd'];
+
   return (
-    <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none', overflow: 'hidden' }}>
+    <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none', overflow: 'hidden' }} aria-hidden="true">
       {[...Array(50)].map((_, i) => (
         <motion.div
           key={i}
@@ -53,7 +60,7 @@ const Confetti = () => {
             position: 'absolute',
             width: 10,
             height: 10,
-            backgroundColor: ['#ffc0cb', '#87ceeb', '#98fb98', '#ffd700', '#dda0dd'][Math.floor(Math.random() * 5)],
+            backgroundColor: colors[Math.floor(Math.random() * colors.length)],
             borderRadius: Math.random() > 0.5 ? '50%' : '0%'
           }}
         />
@@ -62,41 +69,95 @@ const Confetti = () => {
   );
 };
 
-export function WithdrawalModal({ opened, onClose, availableBalance, onSubmit, applicationOptions, form }: WithdrawalModalProps) {
+export function WithdrawalModal({ opened, onClose, availableBalance = 0, applicationOptions }: WithdrawalModalProps) {
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState<'idle' | 'processing' | 'success' | 'error' | 'rejected'>('idle');
   const [errorMessage, setErrorMessage] = useState('');
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string>('');
   const [currentWithdrawalId, setCurrentWithdrawalId] = useState<string | null>(null);
+  const [withdrawalDetails, setWithdrawalDetails] = useState<any>(null);
+  const [isOnline, setIsOnline] = useState(true);
+  const isMobile = useMediaQuery('(max-width: 768px)');
+
+  const playSound = (type: 'success' | 'error') => {
+    try {
+      const audio = new Audio(`/sounds/${type}.mp3`);
+      audio.play().catch(e => console.log('Audio playback prevented or missing asset', e));
+    } catch (e) {}
+  };
 
   useEffect(() => {
-    let interval: NodeJS.Timeout;
-    
-    if (status === 'processing' && currentWithdrawalId) {
-      interval = setInterval(async () => {
-        try {
-          const res = await fetch(`/api/withdrawals/${currentWithdrawalId}`);
-          if (res.ok) {
-            const data = await res.json();
-            if (data.status === 'completed') {
-              setStatus('success');
-              setCurrentWithdrawalId(null);
-            } else if (data.status === 'rejected') {
-              setStatus('rejected');
-              setErrorMessage(data.adminNotes || 'Account requires notarization. Please contact support.');
-              setCurrentWithdrawalId(null);
-            }
-          }
-        } catch (error) {
-          console.error('Error polling withdrawal status:', error);
+    setIsOnline(navigator.onLine);
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
+  useEffect(() => {
+    let timeoutId: NodeJS.Timeout;
+    let isActive = true;
+    let currentInterval = 30000;
+
+    const poll = async () => {
+      if (status !== 'processing' || !currentWithdrawalId) return;
+      
+      const isTimeout = withdrawalDetails && (Date.now() - withdrawalDetails.timestamp > 86400000);
+      
+      if (!isOnline || isTimeout) {
+        if (isActive) timeoutId = setTimeout(poll, currentInterval);
+        return;
+      }
+
+      try {
+        const res = await fetch(`/api/withdrawals/${currentWithdrawalId}`);
+        
+        if (res.status === 401 || res.status === 403) {
+           window.location.href = '/login?returnUrl=/withdrawals';
+           return;
         }
-      }, 3000);
+
+        if (res.ok) {
+          const data = await res.json();
+          if (data.status === 'completed') {
+            playSound('success');
+            setStatus('success');
+            setCurrentWithdrawalId(null);
+            return;
+          } else if (data.status === 'rejected') {
+            playSound('error');
+            setStatus('rejected');
+            setErrorMessage(data.adminNotes || 'Withdrawal was not successful. Please contact support.');
+            setCurrentWithdrawalId(null);
+            return;
+          }
+          currentInterval = 30000;
+        } else {
+          currentInterval = Math.min(currentInterval * 1.5, 300000);
+        }
+      } catch (error) {
+        console.error('Error polling withdrawal status:', error);
+        currentInterval = Math.min(currentInterval * 1.5, 300000);
+      }
+
+      if (isActive && status === 'processing') {
+        timeoutId = setTimeout(poll, currentInterval);
+      }
+    };
+
+    if (status === 'processing' && currentWithdrawalId) {
+      timeoutId = setTimeout(poll, currentInterval);
     }
     
     return () => {
-      if (interval) clearInterval(interval);
+      isActive = false;
+      if (timeoutId) clearTimeout(timeoutId);
     };
-  }, [status, currentWithdrawalId]);
+  }, [status, currentWithdrawalId, isOnline, withdrawalDetails]);
 
   // NEW: Payment method configurations with dynamic fields
   const paymentMethods: PaymentMethodConfig[] = [
@@ -166,9 +227,11 @@ export function WithdrawalModal({ opened, onClose, availableBalance, onSubmit, a
       additionalInfo: {} as Record<string, any>
     },
     validate: {
-  amount: (value: number) => {
+  amount: (value: number, values: any) => {
+    const selectedApp = applicationOptions.find(app => app.value === values.applicationId);
+    const balance = selectedApp ? selectedApp.availableAmount : availableBalance;
     if (value <= 0) return 'Amount must be greater than 0';
-    if (value > availableBalance) return 'Amount exceeds available balance';
+    if (value > balance) return 'Amount exceeds available balance';
     return null;
   },
   paymentMethod: (value: string) => !value ? 'Please select a payment method' : null,
@@ -261,6 +324,12 @@ export function WithdrawalModal({ opened, onClose, availableBalance, onSubmit, a
       // Instead of success, we wait in processing state until admin approval
       if (result.withdrawal && result.withdrawal.withdrawalId) {
         setCurrentWithdrawalId(result.withdrawal.withdrawalId);
+        setWithdrawalDetails({
+           amount: cleanData.amount,
+           bankTail: cleanData.accountNumber !== 'N/A' ? cleanData.accountNumber.slice(-4) : 'N/A',
+           timestamp: Date.now(),
+           txnId: result.withdrawal.withdrawalId
+        });
       }
       
     } catch (error: any) {
@@ -285,6 +354,7 @@ export function WithdrawalModal({ opened, onClose, availableBalance, onSubmit, a
     setErrorMessage('');
     setSelectedPaymentMethod('');
     setCurrentWithdrawalId(null);
+    setWithdrawalDetails(null);
     withdrawalForm.reset();
     setLoading(false);
   };
@@ -424,8 +494,10 @@ export function WithdrawalModal({ opened, onClose, availableBalance, onSubmit, a
       title="Request Withdrawal"
       size="lg"
       centered
+      fullScreen={isMobile}
       closeOnClickOutside={status === 'idle'}
       closeOnEscape={status === 'idle'}
+      aria-label="Withdrawal Request Modal"
     >
       <LoadingOverlay visible={loading && status === 'processing'} />
       
@@ -441,15 +513,7 @@ export function WithdrawalModal({ opened, onClose, availableBalance, onSubmit, a
             <form onSubmit={withdrawalForm.onSubmit(handleSubmit)}>
               <Stack gap="md">
                 {/* Available Balance Display */}
-                <Alert color="blue" variant="light">
-                  <Text size="sm">
-                    Available Balance: <Text component="span" fw={600} c="blue">
-                      ${availableBalance.toLocaleString()}
-                    </Text>
-                  </Text>
-                </Alert>
-
-                {/* Application Selection */}
+                {/* Application Selection (Updates dynamically if not pre-populated) */}
                 <Select
                   label="Select Application"
                   placeholder="Choose approved application"
@@ -457,13 +521,33 @@ export function WithdrawalModal({ opened, onClose, availableBalance, onSubmit, a
                   data={applicationOptions}
                   {...withdrawalForm.getInputProps('applicationId')}
                 />
+                
+                {/* Dynamic Balance Display */}
+                {withdrawalForm.values.applicationId && (
+                  <Alert color="blue" variant="light">
+                    <Text size="sm">
+                      Available Balance:{' '}
+                      <Text component="span" fw={600} c="blue">
+                        ${(
+                          applicationOptions.find(
+                            app => app.value === withdrawalForm.values.applicationId
+                          )?.availableAmount || 0
+                        ).toLocaleString()}
+                      </Text>
+                    </Text>
+                  </Alert>
+                )}
 
                 {/* Amount Input */}
                 <NumberInput
                   label="Withdrawal Amount"
                   placeholder="Enter amount"
                   min={1}
-                  max={availableBalance}
+                  max={
+                    applicationOptions.find(
+                      app => app.value === withdrawalForm.values.applicationId
+                    )?.availableAmount || availableBalance
+                  }
                   prefix="$"
                   thousandSeparator=","
                   required
@@ -517,8 +601,21 @@ export function WithdrawalModal({ opened, onClose, availableBalance, onSubmit, a
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.9 }}
             transition={{ duration: 0.3 }}
+            aria-live="polite"
+            aria-busy="true"
           >
             <Stack align="center" gap="md" py="xl">
+              {!isOnline && (
+                <Alert color="orange" title="Network Disconnected" mb="sm" w="100%">
+                  Reconnecting... We are pausing checks until you are back online.
+                </Alert>
+              )}
+              {withdrawalDetails && (Date.now() - withdrawalDetails.timestamp > 86400000) && (
+                <Alert color="red" title="Timeout Warning" mb="sm" w="100%">
+                  This request is taking longer than expected. Contact support.
+                </Alert>
+              )}
+
               <motion.div
                 animate={{ 
                   rotate: 360,
@@ -550,23 +647,28 @@ export function WithdrawalModal({ opened, onClose, availableBalance, onSubmit, a
                 </div>
               </motion.div>
               <Text size="lg" fw={500}>Processing Withdrawal Request</Text>
-              <Text size="sm" c="dimmed" ta="center">
-                Your request is being securely processed through our banking partners.
-                This may take a few moments...
-              </Text>
               
-              {/* Step progress indicator */}
-              <motion.div
-                initial={{ width: 0 }}
-                animate={{ width: '100%' }}
-                transition={{ duration: 4, ease: "easeInOut" }}
-                style={{
-                  height: 4,
-                  backgroundColor: '#005ea2',
-                  borderRadius: 2,
-                  marginTop: 20
-                }}
-              />
+              <div style={{ width: '100%', maxWidth: 300, marginTop: 10 }}>
+                <Skeleton height={8} radius="xl" mb="xs" animate />
+                <Text size="xs" ta="center" c="dimmed">Admin reviewing...</Text>
+              </div>
+
+              {withdrawalDetails && (
+                 <Alert variant="light" color="blue" mt="md" w="100%" style={{maxWidth: 350}}>
+                    <Group justify="space-between" mb="xs">
+                       <Text size="xs" fw={500}>Amount:</Text>
+                       <Text size="xs" fw={600}>${withdrawalDetails.amount?.toLocaleString()}</Text>
+                    </Group>
+                    <Group justify="space-between" mb="xs">
+                       <Text size="xs" fw={500}>Bank / Acct:</Text>
+                       <Text size="xs">****{withdrawalDetails.bankTail}</Text>
+                    </Group>
+                    <Group justify="space-between" mb="xs">
+                       <Text size="xs" fw={500}>Txn ID:</Text>
+                       <Text size="xs">{withdrawalDetails.txnId}</Text>
+                    </Group>
+                 </Alert>
+              )}
             </Stack>
           </motion.div>
         )}
@@ -578,8 +680,9 @@ export function WithdrawalModal({ opened, onClose, availableBalance, onSubmit, a
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.9 }}
             transition={{ duration: 0.3 }}
+            aria-live="polite"
           >
-            <Confetti />
+            <Confetti amount={withdrawalDetails?.amount || 0} />
             <Stack align="center" gap="md" py="xl" style={{ position: 'relative', zIndex: 10 }}>
               <motion.div
                 initial={{ scale: 0, rotate: -180 }}
@@ -613,7 +716,7 @@ export function WithdrawalModal({ opened, onClose, availableBalance, onSubmit, a
               
               <Text size="xl" fw={600} c="green">Withdrawal Approved!</Text>
               <Text size="sm" c="dimmed" ta="center">
-                Your withdrawal request for ${withdrawalForm.values.amount?.toLocaleString()} has been approved and processed successfully.
+                Withdrawal approved! Funds may take up to 48 hours (2-3 business days) to reflect in your account depending on your bank's processing time.
               </Text>
               
               <motion.div
@@ -668,7 +771,7 @@ export function WithdrawalModal({ opened, onClose, availableBalance, onSubmit, a
               
               <Alert color="red" variant="light">
                 <Text size="sm" fw={500}>Contact Support Center:</Text>
-                <Text size="sm" mt="xs">Your account requires notarization in order to process this withdrawal to your method of choice. Please contact our live agents via WhatsApp below to verify your identity.</Text>
+                <Text size="sm" mt="xs">Withdrawal was not successful. Please contact support for withdrawal processing assistance.</Text>
                 <Text size="xs" mt="md" fw={700}>Admin Notice: {errorMessage}</Text>
               </Alert>
 

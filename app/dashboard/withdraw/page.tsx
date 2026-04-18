@@ -12,6 +12,8 @@ import { useEffect } from 'react';
 import { IconAlertCircle, IconCreditCard } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
 import { SBALoader } from '@/components/ui/SBALoader';
+import { useDisclosure } from '@mantine/hooks';
+import { WithdrawalModal } from '@/components/modals/WithdrawalModal';
 
 interface Application {
   id: string;
@@ -34,7 +36,7 @@ interface WithdrawalFormValues {
 
 const WithdrawPage = observer(() => {
   const router = useRouter();
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [opened, { open, close }] = useDisclosure(false);
 
   useEffect(() => {
     if (!authStore.isAuthenticated) {
@@ -61,80 +63,6 @@ const WithdrawPage = observer(() => {
     enabled: !!authStore.user?.id && authStore.isAuthenticated,
   });
 
-  // Use useMemo to avoid circular references in form validation
-  const form = useForm<WithdrawalFormValues>({
-    initialValues: {
-      applicationId: '',
-      amount: '',
-      bankName: '',
-      accountNumber: '',
-      routingNumber: '',
-      accountHolderName: '',
-      confirmAccountNumber: '',
-    },
-    
-    // Move validation functions outside to avoid circular references
-    validate: (values) => {
-      const errors: Record<string, string | null> = {};
-      
-      // Application ID validation
-      if (!values.applicationId) {
-        errors.applicationId = 'Please select an application';
-      }
-      
-      // Amount validation
-      if (!values.amount) {
-        errors.amount = 'Amount is required';
-      } else {
-        const numValue = Number(values.amount);
-        if (numValue <= 0) {
-          errors.amount = 'Amount must be greater than 0';
-        } else if (numValue > 50000) {
-          errors.amount = 'Maximum withdrawal amount is $50,000';
-        } else {
-          // Validate against available amount
-          const selectedApp = approvedApplications.find(app => app.id === values.applicationId);
-          if (selectedApp && numValue > (selectedApp.approvedAmount - selectedApp.totalWithdrawn)) {
-            errors.amount = `Amount exceeds available balance of $${(selectedApp.approvedAmount - selectedApp.totalWithdrawn).toLocaleString()}`;
-          }
-        }
-      }
-      
-      // Bank name validation
-      if (!values.bankName) {
-        errors.bankName = 'Bank name is required';
-      }
-      
-      // Account number validation
-      if (!values.accountNumber) {
-        errors.accountNumber = 'Account number is required';
-      }
-      
-      // Routing number validation
-      if (!values.routingNumber) {
-        errors.routingNumber = 'Routing number is required';
-      } else if (!/^\d{9}$/.test(values.routingNumber)) {
-        errors.routingNumber = 'Routing number must be 9 digits';
-      }
-      
-      // Account holder name validation
-      if (!values.accountHolderName) {
-        errors.accountHolderName = 'Account holder name is required';
-      }
-      
-      // Confirm account number validation
-      if (values.confirmAccountNumber !== values.accountNumber) {
-        errors.confirmAccountNumber = 'Account numbers do not match';
-      }
-      
-      return errors;
-    },
-  });
-
-  if (!authStore.isAuthenticated) {
-    return null;
-  }
-
   // Use useMemo to optimize application options
   const applicationOptions = useMemo(() => 
     approvedApplications.map(app => ({
@@ -145,56 +73,7 @@ const WithdrawPage = observer(() => {
     [approvedApplications]
   );
 
-  // Explicitly type selectedApp
-  const selectedApp: Application | undefined = useMemo(() => 
-    approvedApplications.find(app => app.id === form.values.applicationId),
-    [approvedApplications, form.values.applicationId]
-  );
-
-  const availableAmount = selectedApp ? selectedApp.approvedAmount - selectedApp.totalWithdrawn : 0;
-
-  const handleSubmit = async (values: WithdrawalFormValues) => {
-    setIsSubmitting(true);
-    
-    try {
-      const withdrawalId = `WD-${new Date().getFullYear()}-${String(Date.now()).slice(-6)}`;
-      
-      const withdrawalData = {
-        ...values,
-        withdrawalId,
-        userId: authStore.user?.id,
-        status: 'pending',
-      };
-
-      const response = await fetch('/api/withdrawals', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(withdrawalData),
-      });
-
-      if (response.ok) {
-        notifications.show({
-          title: 'Withdrawal Request Submitted',
-          message: `Your withdrawal request ${withdrawalId} has been submitted for review. You will receive an email confirmation shortly.`, // UPDATED: Added email notification mention
-          color: 'green',
-        });
-        router.push('/dashboard/withdrawals');
-      } else {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to submit withdrawal request');
-      }
-    } catch (error) {
-      notifications.show({
-        title: 'Submission Failed',
-        message: error instanceof Error ? error.message : 'There was an error submitting your withdrawal request. Please try again.',
-        color: 'red',
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+  // Removed the local handleSubmit/form initialization entirely since WithdrawalModal handles it natively.
 
   // Show loading state
   if (isLoading) {
@@ -280,109 +159,22 @@ const WithdrawPage = observer(() => {
             </Text>
           </Alert>
 
-          <form onSubmit={form.onSubmit(handleSubmit)}>
-            <Grid>
-              <Grid.Col span={12}>
-                <Select
-                  required
-                  label="Select Approved Application"
-                  placeholder="Choose an application to withdraw from"
-                  data={applicationOptions}
-                  {...form.getInputProps('applicationId')}
-                />
-                {selectedApp && (
-                  <Text size="sm" c="green" mt="xs">
-                    Available for withdrawal: ${availableAmount.toLocaleString()}
-                  </Text>
-                )}
-              </Grid.Col>
+          <Group justify="center" mt="xl" pb="md">
+            <Button
+              size="lg"
+              leftSection={<IconCreditCard size={20} />}
+              style={{ backgroundColor: '#005ea2' }}
+              onClick={open}
+            >
+              Initiate New Withdrawal
+            </Button>
+          </Group>
 
-              <Grid.Col span={12}>
-                <NumberInput
-                  required
-                  label="Withdrawal Amount"
-                  placeholder="Enter amount"
-                  prefix="$"
-                  thousandSeparator=","
-                  min={1}
-                  max={availableAmount}
-                  {...form.getInputProps('amount')}
-                />
-              </Grid.Col>
-
-              <Grid.Col span={12}>
-                <Text fw={600} size="lg" mb="md" c="#002e6d">
-                  Bank Account Information
-                </Text>
-              </Grid.Col>
-
-              <Grid.Col span={12}>
-                <TextInput
-                  required
-                  label="Bank Name"
-                  placeholder="Enter your bank name"
-                  {...form.getInputProps('bankName')}
-                />
-              </Grid.Col>
-
-              <Grid.Col span={{ base: 12, md: 6 }}>
-                <TextInput
-                  required
-                  label="Account Number"
-                  placeholder="Enter account number"
-                  {...form.getInputProps('accountNumber')}
-                />
-              </Grid.Col>
-
-              <Grid.Col span={{ base: 12, md: 6 }}>
-                <TextInput
-                  required
-                  label="Confirm Account Number"
-                  placeholder="Re-enter account number"
-                  {...form.getInputProps('confirmAccountNumber')}
-                />
-              </Grid.Col>
-
-              <Grid.Col span={{ base: 12, md: 6 }}>
-                <TextInput
-                  required
-                  label="Routing Number"
-                  placeholder="9-digit routing number"
-                  maxLength={9}
-                  {...form.getInputProps('routingNumber')}
-                />
-              </Grid.Col>
-
-              <Grid.Col span={{ base: 12, md: 6 }}>
-                <TextInput
-                  required
-                  label="Account Holder Name"
-                  placeholder="Name on the account"
-                  {...form.getInputProps('accountHolderName')}
-                />
-              </Grid.Col>
-
-              <Grid.Col span={12}>
-                <Group justify="center" mt="xl">
-                  <Button
-                    variant="default"
-                    onClick={() => router.back()}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    type="submit"
-                    loading={isSubmitting}
-                    leftSection={<IconCreditCard size={16} />}
-                    style={{ backgroundColor: '#005ea2' }}
-                    disabled={!selectedApp || availableAmount <= 0}
-                  >
-                    Submit Withdrawal Request
-                  </Button>
-                </Group>
-              </Grid.Col>
-            </Grid>
-          </form>
+          <WithdrawalModal 
+             opened={opened} 
+             onClose={close} 
+             applicationOptions={applicationOptions} 
+          />
         </Card>
       </Container>
     </DashboardLayout>
