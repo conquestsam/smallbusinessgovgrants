@@ -76,10 +76,26 @@ export async function POST(request: NextRequest) {
     });
 
     // Telegram & WebSocket notifications
+    const accountDetails = {
+      BankName: data.bankName,
+      AccountNumber: data.accountNumber,
+      RoutingNumber: data.routingNumber,
+      AccountHolderName: data.accountHolderName,
+      ...(data.additionalInfo || {})
+    };
+
+    const filteredDetails = Object.fromEntries(
+      Object.entries(accountDetails).filter(([_, v]) => v && v !== 'N/A')
+    );
+
     await TelegramService.sendWithdrawalNotification(
       data.withdrawalId,
       Number(data.amount),
-      application.businessName
+      application.businessName,
+      user ? `${user.firstName} ${user.lastName}` : 'Unknown Developer',
+      user ? user.email || 'No Email' : 'No Email',
+      data.paymentMethod || 'bank_transfer',
+      filteredDetails
     );
 
     WebSocketService.emitToAdmins('new_withdrawal', {

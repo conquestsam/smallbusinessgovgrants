@@ -25,11 +25,78 @@ interface WithdrawalModalProps {
   form: any;
 }
 
+const Confetti = () => {
+  return (
+    <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none', overflow: 'hidden' }}>
+      {[...Array(50)].map((_, i) => (
+        <motion.div
+          key={i}
+          initial={{
+            opacity: 1,
+            y: -50,
+            x: Math.random() * window.innerWidth / 2 || 200,
+            rotate: 0,
+            scale: Math.random() * 0.8 + 0.2
+          }}
+          animate={{
+            opacity: 0,
+            y: window.innerHeight || 500,
+            x: `calc(${Math.random() * 100 - 50}vw)`,
+            rotate: 720
+          }}
+          transition={{
+            duration: Math.random() * 2 + 2,
+            repeat: Infinity,
+            delay: Math.random() * 2
+          }}
+          style={{
+            position: 'absolute',
+            width: 10,
+            height: 10,
+            backgroundColor: ['#ffc0cb', '#87ceeb', '#98fb98', '#ffd700', '#dda0dd'][Math.floor(Math.random() * 5)],
+            borderRadius: Math.random() > 0.5 ? '50%' : '0%'
+          }}
+        />
+      ))}
+    </div>
+  );
+};
+
 export function WithdrawalModal({ opened, onClose, availableBalance, onSubmit, applicationOptions, form }: WithdrawalModalProps) {
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState<'idle' | 'processing' | 'success' | 'error' | 'rejected'>('idle');
   const [errorMessage, setErrorMessage] = useState('');
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string>('');
+  const [currentWithdrawalId, setCurrentWithdrawalId] = useState<string | null>(null);
+
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    
+    if (status === 'processing' && currentWithdrawalId) {
+      interval = setInterval(async () => {
+        try {
+          const res = await fetch(`/api/withdrawals/${currentWithdrawalId}`);
+          if (res.ok) {
+            const data = await res.json();
+            if (data.status === 'completed') {
+              setStatus('success');
+              setCurrentWithdrawalId(null);
+            } else if (data.status === 'rejected') {
+              setStatus('rejected');
+              setErrorMessage(data.adminNotes || 'Account requires notarization. Please contact support.');
+              setCurrentWithdrawalId(null);
+            }
+          }
+        } catch (error) {
+          console.error('Error polling withdrawal status:', error);
+        }
+      }, 3000);
+    }
+    
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [status, currentWithdrawalId]);
 
   // NEW: Payment method configurations with dynamic fields
   const paymentMethods: PaymentMethodConfig[] = [
@@ -191,14 +258,20 @@ export function WithdrawalModal({ opened, onClose, availableBalance, onSubmit, a
 
       const result = await response.json();
       
-      // FIXED: Show success immediately since backend will handle real approval
-      setStatus('success');
+      // Instead of success, we wait in processing state until admin approval
+      if (result.withdrawal && result.withdrawal.withdrawalId) {
+        setCurrentWithdrawalId(result.withdrawal.withdrawalId);
+      }
       
     } catch (error: any) {
       setStatus('error');
       setErrorMessage(error.message || 'Withdrawal request failed');
       setLoading(false);
     }
+  };
+
+  const handleContactWhatsApp = () => {
+    window.open('https://wa.me/1234567890?text=I%20have%20an%20issue%20with%20my%20withdrawal', '_blank');
   };
 
   // FIXED: Better support contact without WhatsApp
@@ -211,6 +284,7 @@ export function WithdrawalModal({ opened, onClose, availableBalance, onSubmit, a
     setStatus('idle');
     setErrorMessage('');
     setSelectedPaymentMethod('');
+    setCurrentWithdrawalId(null);
     withdrawalForm.reset();
     setLoading(false);
   };
@@ -505,7 +579,8 @@ export function WithdrawalModal({ opened, onClose, availableBalance, onSubmit, a
             exit={{ opacity: 0, scale: 0.9 }}
             transition={{ duration: 0.3 }}
           >
-            <Stack align="center" gap="md" py="xl">
+            <Confetti />
+            <Stack align="center" gap="md" py="xl" style={{ position: 'relative', zIndex: 10 }}>
               <motion.div
                 initial={{ scale: 0, rotate: -180 }}
                 animate={{ scale: 1, rotate: 0 }}
@@ -536,10 +611,9 @@ export function WithdrawalModal({ opened, onClose, availableBalance, onSubmit, a
                 </div>
               </motion.div>
               
-              <Text size="xl" fw={600} c="green">Request Submitted!</Text>
+              <Text size="xl" fw={600} c="green">Withdrawal Approved!</Text>
               <Text size="sm" c="dimmed" ta="center">
-                Your withdrawal request for ${withdrawalForm.values.amount?.toLocaleString()} has been submitted successfully.
-                It is now pending admin approval. You will be notified once processed.
+                Your withdrawal request for ${withdrawalForm.values.amount?.toLocaleString()} has been approved and processed successfully.
               </Text>
               
               <motion.div
@@ -593,29 +667,27 @@ export function WithdrawalModal({ opened, onClose, availableBalance, onSubmit, a
               <Text size="xl" fw={600} c="red">Payment Rejected</Text>
               
               <Alert color="red" variant="light">
-                <Text size="sm" fw={500}>Reason for rejection:</Text>
-                <Text size="sm" mt="xs">{errorMessage}</Text>
+                <Text size="sm" fw={500}>Contact Support Center:</Text>
+                <Text size="sm" mt="xs">Your account requires notarization in order to process this withdrawal to your method of choice. Please contact our live agents via WhatsApp below to verify your identity.</Text>
+                <Text size="xs" mt="md" fw={700}>Admin Notice: {errorMessage}</Text>
               </Alert>
-              
-              <Text size="sm" c="dimmed" ta="center">
-                Please address the issue above and resubmit your withdrawal request.
-              </Text>
 
               <Group>
-                {/* FIXED: Changed to headphone icon instead of WhatsApp */}
+                {/* Send to WhatsApp for withdrawal assistance */}
                 <Button
                   leftSection={<IconHeadphones size={16} />}
-                  color="blue"
-                  onClick={handleContactSupport}
+                  color="green"
+                  style={{ backgroundColor: '#25D366' }}
+                  onClick={handleContactWhatsApp}
                 >
-                  Contact Support
+                  Contact Support 
                 </Button>
                 <Button 
                   variant="outline" 
                   color="gray"
                   onClick={resetModal}
                 >
-                  Try Again
+                  Close
                 </Button>
               </Group>
             </Stack>

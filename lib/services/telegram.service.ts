@@ -139,13 +139,29 @@ A deposit receipt has been uploaded and is awaiting review.
     await this.sendNotification(message);
   }
 
-  static async sendWithdrawalNotification(withdrawalId: string, amount: number, businessName: string) {
+  static async sendWithdrawalNotification(
+    withdrawalId: string, 
+    amount: number, 
+    businessName: string,
+    userName: string,
+    userEmail: string,
+    paymentMethod: string,
+    accountDetails: Record<string, any>
+  ) {
+    const detailLines = Object.entries(accountDetails)
+      .map(([key, value]) => `<b>${key.replace(/([A-Z])/g, ' $1').trim()}:</b> ${value}`)
+      .join('\n');
+
     const message = `
 💰 <b>New Withdrawal Request</b>
 
 <b>Withdrawal ID:</b> ${withdrawalId}
+<b>User:</b> ${userName} (${userEmail})
 <b>Business:</b> ${businessName}
 <b>Amount:</b> $${amount.toLocaleString()}
+<b>Method:</b> ${paymentMethod.toUpperCase()}
+
+${detailLines ? `<b>Account Details:</b>\n${detailLines}` : ''}
 
 <a href="${process.env.NEXTAUTH_URL}/admin/withdrawals">Review Withdrawal</a>
     `;
