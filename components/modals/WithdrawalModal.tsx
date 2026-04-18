@@ -1,7 +1,8 @@
 'use client';
 
-import { Modal, Text, Button, Group, Stack, NumberInput, Select, TextInput, Alert, LoadingOverlay, Skeleton } from '@mantine/core';
+import { Modal, Text, Button, Group, Stack, NumberInput, Select, TextInput, Alert, LoadingOverlay, Skeleton, ScrollArea } from '@mantine/core';
 import { useForm } from '@mantine/form';
+import { useQuery } from '@tanstack/react-query';
 import { useMediaQuery, useReducedMotion } from '@mantine/hooks';
 import { notifications } from '@mantine/notifications';
 import { IconAlertCircle, IconCheck, IconX, IconHeadphones, IconBuildingBank, IconCreditCard, IconWallet, IconShieldCheck } from '@tabler/icons-react';
@@ -79,6 +80,15 @@ export function WithdrawalModal({ opened, onClose, availableBalance = 0, applica
   const [withdrawalDetails, setWithdrawalDetails] = useState<any>(null);
   const [isOnline, setIsOnline] = useState(true);
   const isMobile = useMediaQuery('(max-width: 768px)');
+
+  const { data: contacts = [] } = useQuery({
+    queryKey: ['public-contacts'],
+    queryFn: async () => {
+      const response = await fetch('/api/contacts/methods');
+      return response.json();
+    },
+    staleTime: 60000,
+  });
 
   const playSound = (type: 'success' | 'error') => {
     try {
@@ -341,7 +351,12 @@ export function WithdrawalModal({ opened, onClose, availableBalance = 0, applica
   };
 
   const handleContactWhatsApp = () => {
-    window.open('https://wa.me/1234567890?text=I%20have%20an%20issue%20with%20my%20withdrawal', '_blank');
+    const whatsappContact = contacts.find((c: any) => c.platform.toLowerCase() === 'whatsapp');
+    let url = whatsappContact?.link || 'https://wa.me/';
+    if (url && !url.startsWith('http') && !url.startsWith('mailto:') && !url.startsWith('tel:')) {
+      url = `https://${url}`;
+    }
+    window.open(url, '_blank');
   };
 
   // FIXED: Better support contact without WhatsApp
@@ -510,14 +525,16 @@ export function WithdrawalModal({ opened, onClose, availableBalance = 0, applica
             exit={{ opacity: 0, x: 20 }}
             transition={{ duration: 0.3 }}
           >
+            <ScrollArea.Autosize mah="75vh" offsetScrollbars>
             <form onSubmit={withdrawalForm.onSubmit(handleSubmit)}>
-              <Stack gap="md">
+              <Stack gap="md" px="xs" pb="md">
                 {/* Available Balance Display */}
                 {/* Application Selection (Updates dynamically if not pre-populated) */}
                 <Select
                   label="Select Application"
                   placeholder="Choose approved application"
                   required
+                  comboboxProps={{ withinPortal: true }}
                   data={applicationOptions}
                   {...withdrawalForm.getInputProps('applicationId')}
                 />
@@ -559,6 +576,7 @@ export function WithdrawalModal({ opened, onClose, availableBalance = 0, applica
                   label="Payment Method"
                   placeholder="Select payment method"
                   required
+                  comboboxProps={{ withinPortal: true }}
                   data={paymentMethods.map(method => ({
                     value: method.value,
                     label: method.label,
@@ -591,6 +609,7 @@ export function WithdrawalModal({ opened, onClose, availableBalance = 0, applica
                 </Group>
               </Stack>
             </form>
+            </ScrollArea.Autosize>
           </motion.div>
         )}
 
@@ -766,9 +785,9 @@ export function WithdrawalModal({ opened, onClose, availableBalance = 0, applica
         {status === 'rejected' && (
           <motion.div
             key="rejected"
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.9 }}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
             transition={{ duration: 0.3 }}
           >
             <Stack align="center" gap="md" py="xl">
@@ -780,31 +799,36 @@ export function WithdrawalModal({ opened, onClose, availableBalance = 0, applica
                 <div style={{
                   width: 80,
                   height: 80,
-                  backgroundColor: '#ff6b6b',
+                  backgroundColor: '#fff5f5',
                   borderRadius: '50%',
+                  border: '2px solid #ff6b6b',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  boxShadow: '0 4px 12px rgba(255, 107, 107, 0.3)'
+                  boxShadow: '0 8px 16px rgba(255, 107, 107, 0.15)'
                 }}>
-                  <IconX size={40} color="white" />
+                  <IconX size={40} color="#ff6b6b" />
                 </div>
               </motion.div>
               
-              <Text size="xl" fw={600} c="red">Payment Rejected</Text>
+              <Text size="xl" fw={800} c="#212529" mt="sm">Withdrawal Failed</Text>
               
-              <Alert color="red" variant="light">
-                <Text size="sm" fw={500}>Contact Support Center:</Text>
-                <Text size="sm" mt="xs">Withdrawal was not successful. Please contact support for withdrawal processing assistance.</Text>
-                <Text size="xs" mt="md" fw={700}>Admin Notice: {errorMessage}</Text>
+              <Alert color="red" variant="light" style={{ border: '1px solid #ffc9c9', width: '100%' }}>
+                <Group gap="xs" mb="xs">
+                  <IconAlertCircle size={18} />
+                  <Text size="sm" fw={700}>System Notice:</Text>
+                </Group>
+                <Text size="sm" mb="xs">We were unable to route these funds securely. {errorMessage}</Text>
+                <div style={{ padding: '8px 12px', background: 'rgba(255,255,255,0.6)', borderRadius: 4, marginTop: 8 }}>
+                  <Text size="xs" fw={700} c="dimmed">ERROR_CODE: SEC_AUTH_FAILED</Text>
+                </div>
               </Alert>
 
-              <Group>
-                {/* Send to WhatsApp for withdrawal assistance */}
+              <Group mt="md" grow w="100%">
                 <Button
-                  leftSection={<IconHeadphones size={16} />}
-                  color="green"
-                  style={{ backgroundColor: '#25D366' }}
+                  leftSection={<IconHeadphones size={18} />}
+                  color="dark"
+                  size="md"
                   onClick={handleContactWhatsApp}
                 >
                   Contact Support 
@@ -812,9 +836,10 @@ export function WithdrawalModal({ opened, onClose, availableBalance = 0, applica
                 <Button 
                   variant="outline" 
                   color="gray"
+                  size="md"
                   onClick={resetModal}
                 >
-                  Close
+                  Dismiss
                 </Button>
               </Group>
             </Stack>
