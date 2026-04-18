@@ -56,6 +56,7 @@ const FundingPage = observer(() => {
   // [WHY] Render actual brand logos — uses native <img> with onError fallback
   const getMethodIcon = (methodName: string, iconUrl?: string, size = 36) => {
     const renderLogo = (src: string, alt: string) => (
+      /* eslint-disable-next-line @next/next/no-img-element */
       <img
         src={src}
         alt={alt}
