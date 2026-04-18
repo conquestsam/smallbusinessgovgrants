@@ -463,9 +463,15 @@ export const PaymentFlowModal = ({ opened, onClose, method, wallets }: PaymentFl
           <ThemeIcon size={40} radius="md" variant="light" style={{ backgroundColor: 'rgba(0, 94, 162, 0.1)', color: '#005ea2' }}>
             {/* [WHY] Render actual logo if available, fallback to icon */}
             {method?.iconUrl ? (
-              <img src={method.iconUrl} width={22} height={22} style={{ objectFit: 'contain' }} alt={method.displayName} />
+              <>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={method.iconUrl} width={22} height={22} style={{ objectFit: 'contain' }} alt={method.displayName} />
+              </>
             ) : PAYMENT_LOGOS[method?.methodName?.toLowerCase()] ? (
-              <img src={PAYMENT_LOGOS[method?.methodName?.toLowerCase()]} width={22} height={22} style={{ objectFit: 'contain' }} alt={method?.methodName} />
+              <>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={PAYMENT_LOGOS[method?.methodName?.toLowerCase()]} width={22} height={22} style={{ objectFit: 'contain' }} alt={method?.methodName} />
+              </>
             ) : (
               <IconBuildingBank size={22} />
             )}
