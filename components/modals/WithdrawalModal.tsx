@@ -716,7 +716,7 @@ export function WithdrawalModal({ opened, onClose, availableBalance = 0, applica
               
               <Text size="xl" fw={600} c="green">Withdrawal Approved!</Text>
               <Text size="sm" c="dimmed" ta="center">
-                Withdrawal approved! Funds may take up to 48 hours (2-3 business days) to reflect in your account depending on your bank's processing time.
+                Withdrawal approved! Funds may take up to 48 hours (2-3 business days) to reflect in your account depending on your bank&apos;s processing time.
               </Text>
               
               <motion.div
