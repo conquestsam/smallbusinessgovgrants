@@ -202,6 +202,7 @@ const AdminWithdrawalsPage = observer(() => {
                 label="Status"
                 value={reviewData.status}
                 onChange={(value) => setReviewData({ ...reviewData, status: value || '' })}
+                comboboxProps={{ withinPortal: true }}
                 data={[
                   { value: 'pending', label: 'Pending' },
                   { value: 'processing', label: 'Processing' },

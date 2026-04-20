@@ -361,8 +361,9 @@ export function WithdrawalModal({ opened, onClose, availableBalance = 0, applica
 
   // FIXED: Better support contact without WhatsApp
   const handleContactSupport = () => {
-    // Use email or your support system instead of WhatsApp
-    window.open('mailto:support@yourcompany.com?subject=Withdrawal%20Support', '_blank');
+    // [WHY] Use dynamic support email if possible, or a more professional one
+    const supportEmail = 'support@sbagovgrants.com';
+    window.open(`mailto:${supportEmail}?subject=Withdrawal%20Support`, '_blank');
   };
 
   const resetModal = () => {
@@ -601,7 +602,7 @@ export function WithdrawalModal({ opened, onClose, availableBalance = 0, applica
                     </Button>
                     <Button
                       type="submit"
-                      color="primary"
+                      style={{ backgroundColor: '#005ea2' }}
                       disabled={!selectedPaymentMethod}
                     >
                       Submit Request
@@ -827,7 +828,7 @@ export function WithdrawalModal({ opened, onClose, availableBalance = 0, applica
               <Group mt="md" grow w="100%">
                 <Button
                   leftSection={<IconHeadphones size={18} />}
-                  color="dark"
+                  style={{ backgroundColor: '#212529', color: 'white' }}
                   size="md"
                   onClick={handleContactWhatsApp}
                 >
@@ -879,7 +880,7 @@ export function WithdrawalModal({ opened, onClose, availableBalance = 0, applica
               {/* FIXED: Also changed error state support button */}
               <Button
                 leftSection={<IconHeadphones size={16} />}
-                color="blue"
+                style={{ backgroundColor: '#005ea2' }}
                 onClick={handleContactSupport}
               >
                 Contact Support

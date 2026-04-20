@@ -100,8 +100,11 @@ export async function PUT(request: NextRequest) {
           email: user.email,
           withdrawalId: withdrawalId,
           amount: Number(updatedWithdrawal[0].amount),
-          status: status as 'pending' | 'approved' | 'rejected' | 'processed',
-          paymentMethod: 'Bank Transfer', // Assuming bank transfer for all withdrawals
+          status: status as 'pending' | 'approved' | 'rejected' | 'processed' | 'completed',
+          paymentMethod: updatedWithdrawal[0].bankName.includes('Transfer') ? updatedWithdrawal[0].bankName : 'Bank Transfer',
+          bankName: updatedWithdrawal[0].bankName,
+          accountNumber: updatedWithdrawal[0].accountNumber,
+          accountHolderName: updatedWithdrawal[0].accountHolderName,
           processedAt: updatedWithdrawal[0].processedAt?.toISOString() || new Date().toISOString(),
           notes: adminNotes
         });

@@ -101,7 +101,7 @@ export const ApplicationSuccessModal = ({ opened, onClose, application }: Applic
 
           <Button
             fullWidth size="lg" variant="light" onClick={onClose}
-            style={{ color: '#005ea2' }}
+            style={{ color: '#005ea2', backgroundColor: 'rgba(0, 94, 162, 0.1)' }}
           >
             Return to Dashboard
           </Button>
@@ -134,6 +134,7 @@ export const ApplicationSuccessModal = ({ opened, onClose, application }: Applic
 
           <Button
             fullWidth size="lg" variant="light" color="red" onClick={onClose}
+            style={{ backgroundColor: 'rgba(250, 82, 82, 0.1)' }}
           >
             Close & Try Again
           </Button>

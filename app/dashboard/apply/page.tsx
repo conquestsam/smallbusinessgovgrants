@@ -318,7 +318,7 @@ const ApplyPage = observer(() => {
                   </Button>
                 ) : (
                   <Button
-                    color="green"
+                    style={{ backgroundColor: '#16a34a' }}
                     leftSection={<IconSend size={16} />}
                     onClick={handleSubmit}
                     loading={isSubmitting}
