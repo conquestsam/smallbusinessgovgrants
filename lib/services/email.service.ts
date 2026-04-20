@@ -73,11 +73,11 @@ const getGmailTransporter = () => {
   const user = process.env.GMAIL_USER;
   // [WHY] Trim spaces from app password to handle common copy-paste formatting issues
   const pass = process.env.GMAIL_APP_PASSWORD?.replace(/\s+/g, '');
-  
+
   if (!user || !pass || user === 'your-email@gmail.com') {
     return null;
   }
-  
+
   // [WHY] Use explicit SMTP config (host/port/secure) instead of 'service: gmail' 
   // for better compatibility with server environments like AWS/Vercel
   return nodemailer.createTransport({
@@ -105,7 +105,7 @@ export class EmailService {
       const transporter = getGmailTransporter();
       if (transporter) {
         await transporter.sendMail({
-          from: `SBA Grant System <${process.env.GMAIL_USER}>`,
+          from: `SBA Government Grant <${process.env.GMAIL_USER}>`,
           to: options.to,
           subject: options.subject,
           html: options.html,
@@ -236,7 +236,7 @@ export class EmailService {
   static async sendWithdrawalStatusEmail(data: WithdrawalStatusEmailData) {
     const appUrl = data.appUrl || this.getAppUrl();
     const html = this.generateWithdrawalStatusEmailHTML(data, appUrl);
-    
+
     await this.sendEmailWithFallback({
       to: data.email,
       subject: `Withdrawal ${data.withdrawalId} Status Update`,
@@ -247,7 +247,7 @@ export class EmailService {
   static async sendApplicationStatusEmail(data: ApplicationStatusEmailData) {
     const appUrl = data.appUrl || this.getAppUrl();
     const html = this.generateApplicationStatusEmailHTML(data, appUrl);
-    
+
     await this.sendEmailWithFallback({
       to: data.email,
       subject: `Application ${data.applicationNumber} Status Update`,
@@ -255,11 +255,11 @@ export class EmailService {
     });
   }
 
-  static async sendRegistrationEmail(data: RegistrationEmailData) { 
+  static async sendRegistrationEmail(data: RegistrationEmailData) {
     this.logEmailConfig();
     const baseStyles = this.getBaseEmailStyles()
     const appUrl = data.appUrl || this.getAppUrl()
-    
+
     const html = `<!DOCTYPE html>
       <html>
         <head>
@@ -377,14 +377,14 @@ export class EmailService {
   }
 
   static async sendPasswordResetEmail(
-  email: string, 
-  name: string, 
-  temporaryPassword: string
-) {
-  const baseStyles = this.getBaseEmailStyles();
-  const appUrl = this.getAppUrl();
-  
-  const html = `
+    email: string,
+    name: string,
+    temporaryPassword: string
+  ) {
+    const baseStyles = this.getBaseEmailStyles();
+    const appUrl = this.getAppUrl();
+
+    const html = `
     <!DOCTYPE html>
     <html>
       <head>
@@ -468,21 +468,21 @@ export class EmailService {
       </body>
     </html>
   `;
-  
-  await this.sendEmailWithFallback({
-    to: email,
-    subject: 'Password Reset - SBA Grant Portal',
-    html,
-  });
-}
-  
+
+    await this.sendEmailWithFallback({
+      to: email,
+      subject: 'Password Reset - SBA Grant Portal',
+      html,
+    });
+  }
+
 
   // Add to EmailService class in email.service.ts
-static async sendNewsletter(to: string, name: string, subject: string, content: string) {
-  const baseStyles = this.getBaseEmailStyles();
-  const appUrl = this.getAppUrl();
-  
-  const html = `
+  static async sendNewsletter(to: string, name: string, subject: string, content: string) {
+    const baseStyles = this.getBaseEmailStyles();
+    const appUrl = this.getAppUrl();
+
+    const html = `
     <!DOCTYPE html>
     <html>
       <head>
@@ -549,13 +549,13 @@ static async sendNewsletter(to: string, name: string, subject: string, content: 
       </body>
     </html>
   `;
-  
-  await this.sendEmailWithFallback({
-    to,
-    subject,
-    html,
-  });
-}
+
+    await this.sendEmailWithFallback({
+      to,
+      subject,
+      html,
+    });
+  }
 
   static async sendApplicationApproval(to: string, data: ApprovalNotificationEmailData, appUrl: string) {
     const baseStyles = this.getBaseEmailStyles()
@@ -651,7 +651,7 @@ static async sendNewsletter(to: string, name: string, subject: string, content: 
   // NEW: Withdrawal Status Email HTML Generator
   private static generateWithdrawalStatusEmailHTML(data: WithdrawalStatusEmailData, appUrl: string): string {
     const baseStyles = this.getBaseEmailStyles()
-    
+
     const getStatusInfo = () => {
       switch (data.status) {
         case 'completed':
@@ -843,12 +843,12 @@ static async sendNewsletter(to: string, name: string, subject: string, content: 
     const submissionDate = new Date(data.submissionDate)
     const deadline = new Date(submissionDate)
     deadline.setDate(deadline.getDate() + 3)
-    const formattedDeadline = deadline.toLocaleDateString('en-US', { 
-      year: 'numeric', 
-      month: 'long', 
-      day: 'numeric' 
+    const formattedDeadline = deadline.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
     })
-    
+
     const getStatusInfo = () => {
       switch (data.status) {
         case 'submitted':
@@ -1021,9 +1021,9 @@ static async sendNewsletter(to: string, name: string, subject: string, content: 
               </h3>
               <p style="color: #374151; margin: 0;">
                 ${isApproved
-                  ? `Your $${data.depositAmount.toLocaleString()} deposit via <strong>${data.paymentMethod}</strong> has been verified and approved. Your grant application is now being processed.`
-                  : `Your $${data.depositAmount.toLocaleString()} deposit via <strong>${data.paymentMethod}</strong> was rejected.${data.adminNotes ? ` Reason: ${data.adminNotes}` : ' Please contact support for more details.'}`
-                }
+        ? `Your $${data.depositAmount.toLocaleString()} deposit via <strong>${data.paymentMethod}</strong> has been verified and approved. Your grant application is now being processed.`
+        : `Your $${data.depositAmount.toLocaleString()} deposit via <strong>${data.paymentMethod}</strong> was rejected.${data.adminNotes ? ` Reason: ${data.adminNotes}` : ' Please contact support for more details.'}`
+      }
               </p>
             </div>
 
@@ -1109,14 +1109,14 @@ static async sendNewsletter(to: string, name: string, subject: string, content: 
 
   static async sendNewsletterToAllUsers(subject: string, content: string, users: string[]) {
     try {
-      const promises = users.map(email => 
+      const promises = users.map(email =>
         this.sendEmailWithFallback({
           to: email,
           subject,
           html: content,
         })
       );
-      
+
       await Promise.all(promises);
     } catch (error) {
       console.error('Newsletter send error:', error);
