@@ -105,7 +105,7 @@ export class EmailService {
       const transporter = getGmailTransporter();
       if (transporter) {
         await transporter.sendMail({
-          from: `SBA Government Grant <${process.env.GMAIL_USER}>`,
+          from: `SBA Grant <${process.env.GMAIL_USER}>`,
           to: options.to,
           subject: options.subject,
           html: options.html,
