@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
   try {
     // Verify admin access via Redis session lookup
     const session = await getAuthSession(request);
-    
+
     if (!session || session.role !== 'admin') {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     }
@@ -59,10 +59,10 @@ export async function GET(request: NextRequest) {
 export async function PUT(request: NextRequest) {
   try {
     const { withdrawalId, status, adminNotes } = await request.json();
-    
+
     // Verify admin access via Redis session lookup
     const session = await getAuthSession(request);
-    
+
     if (!session || session.role !== 'admin') {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     }
@@ -92,7 +92,7 @@ export async function PUT(request: NextRequest) {
 
     if (userResult.length > 0) {
       const user = userResult[0];
-      
+
       // NEW: Send withdrawal status email notification
       try {
         await EmailService.sendWithdrawalStatusEmail({
@@ -113,16 +113,9 @@ export async function PUT(request: NextRequest) {
         console.error('Failed to send withdrawal status email:', emailError);
         // Don't throw error, continue with the response
       }
-      
-      // Send success email (legacy - can be removed if using new status emails)
+
+      // Real-time notification
       if (status === 'completed') {
-        await EmailService.sendWithdrawalSuccess(
-          user.email,
-          withdrawalId,
-          Number(updatedWithdrawal[0].amount)
-        );
-        
-        // Real-time notification
         WebSocketService.emitToUser(user.id, 'withdrawal_completed', {
           withdrawalId,
           amount: updatedWithdrawal[0].amount

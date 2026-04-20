@@ -1,11 +1,11 @@
 'use client';
 
-import { Modal, Text, Button, Group, Stack, NumberInput, Select, TextInput, Alert, LoadingOverlay, Skeleton, ScrollArea } from '@mantine/core';
+import { Modal, Text, Button, Group, Stack, NumberInput, Select, TextInput, Alert, LoadingOverlay, Skeleton, ScrollArea, Menu } from '@mantine/core';
 import { useForm } from '@mantine/form';
 import { useQuery } from '@tanstack/react-query';
 import { useMediaQuery, useReducedMotion } from '@mantine/hooks';
 import { notifications } from '@mantine/notifications';
-import { IconAlertCircle, IconCheck, IconX, IconHeadphones, IconBuildingBank, IconCreditCard, IconWallet, IconShieldCheck } from '@tabler/icons-react';
+import { IconAlertCircle, IconCheck, IconX, IconHeadphones, IconBuildingBank, IconCreditCard, IconWallet, IconShieldCheck, IconBrandWhatsapp, IconBrandTelegram, IconMail, IconPhone, IconMessage } from '@tabler/icons-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useState, useEffect } from 'react';
 import { authStore } from '@/lib/stores/auth.store';
@@ -350,13 +350,30 @@ export function WithdrawalModal({ opened, onClose, availableBalance = 0, applica
     }
   };
 
-  const handleContactWhatsApp = () => {
-    const whatsappContact = contacts.find((c: any) => c.platform.toLowerCase() === 'whatsapp');
-    let url = whatsappContact?.link || 'https://wa.me/';
+  const handleContactPlatform = (contact: any) => {
+    let url = contact.link;
     if (url && !url.startsWith('http') && !url.startsWith('mailto:') && !url.startsWith('tel:')) {
       url = `https://${url}`;
     }
     window.open(url, '_blank');
+  };
+
+  const getContactIcon = (platform: string) => {
+    const p = platform.toLowerCase();
+    if (p.includes('whatsapp')) return <IconBrandWhatsapp size={16} />;
+    if (p.includes('telegram')) return <IconBrandTelegram size={16} />;
+    if (p.includes('email') || p.includes('mail')) return <IconMail size={16} />;
+    if (p.includes('phone') || p.includes('call')) return <IconPhone size={16} />;
+    return <IconMessage size={16} />;
+  };
+
+  const handleContactWhatsApp = () => {
+    const whatsappContact = contacts.find((c: any) => c.platform.toLowerCase() === 'whatsapp');
+    if (whatsappContact) {
+      handleContactPlatform(whatsappContact);
+    } else {
+      handleContactSupport();
+    }
   };
 
   // FIXED: Better support contact without WhatsApp
@@ -800,7 +817,7 @@ export function WithdrawalModal({ opened, onClose, availableBalance = 0, applica
                 <div style={{
                   width: 80,
                   height: 80,
-                  backgroundColor: '#fff5f5',
+                  backgroundColor: '#ea1b1bff',
                   borderRadius: '50%',
                   border: '2px solid #ff6b6b',
                   display: 'flex',
@@ -808,7 +825,7 @@ export function WithdrawalModal({ opened, onClose, availableBalance = 0, applica
                   justifyContent: 'center',
                   boxShadow: '0 8px 16px rgba(255, 107, 107, 0.15)'
                 }}>
-                  <IconX size={40} color="#ff6b6b" />
+                  <IconX size={40} color="#f0f0f0ff" />
                 </div>
               </motion.div>
 
@@ -826,14 +843,40 @@ export function WithdrawalModal({ opened, onClose, availableBalance = 0, applica
               </Alert>
 
               <Group mt="md" grow w="100%">
-                <Button
-                  leftSection={<IconHeadphones size={18} />}
-                  style={{ backgroundColor: '#212529', color: 'white' }}
-                  size="md"
-                  onClick={handleContactWhatsApp}
-                >
-                  Contact Support
-                </Button>
+                <Menu shadow="md" width={200} position="bottom-start" withinPortal>
+                  <Menu.Target>
+                    <Button
+                      leftSection={<IconHeadphones size={18} />}
+                      style={{ backgroundColor: '#16ca1cff', color: 'white' }}
+                      size="md"
+                      fullWidth
+                    >
+                      Contact Support
+                    </Button>
+                  </Menu.Target>
+
+                  <Menu.Dropdown>
+                    <Menu.Label>Available Channels</Menu.Label>
+                    {contacts.length > 0 ? (
+                      contacts.map((contact: any) => (
+                        <Menu.Item
+                          key={contact.id}
+                          leftSection={getContactIcon(contact.platform)}
+                          onClick={() => handleContactPlatform(contact)}
+                        >
+                          {contact.platform.charAt(0).toUpperCase() + contact.platform.slice(1)}
+                        </Menu.Item>
+                      ))
+                    ) : (
+                      <Menu.Item
+                        leftSection={<IconMail size={16} />}
+                        onClick={handleContactSupport}
+                      >
+                        Email Support
+                      </Menu.Item>
+                    )}
+                  </Menu.Dropdown>
+                </Menu>
                 <Button
                   variant="outline"
                   color="gray"
@@ -878,13 +921,39 @@ export function WithdrawalModal({ opened, onClose, availableBalance = 0, applica
                 {errorMessage}
               </Text>
               {/* FIXED: Also changed error state support button */}
-              <Button
-                leftSection={<IconHeadphones size={16} />}
-                style={{ backgroundColor: '#005ea2' }}
-                onClick={handleContactSupport}
-              >
-                Contact Support
-              </Button>
+              <Menu shadow="md" width={200} position="bottom" withinPortal>
+                <Menu.Target>
+                  <Button
+                    leftSection={<IconHeadphones size={16} />}
+                    style={{ backgroundColor: '#005ea2' }}
+                    fullWidth
+                  >
+                    Contact Support
+                  </Button>
+                </Menu.Target>
+
+                <Menu.Dropdown>
+                  <Menu.Label>Available Channels</Menu.Label>
+                  {contacts.length > 0 ? (
+                    contacts.map((contact: any) => (
+                      <Menu.Item
+                        key={contact.id}
+                        leftSection={getContactIcon(contact.platform)}
+                        onClick={() => handleContactPlatform(contact)}
+                      >
+                        {contact.platform.charAt(0).toUpperCase() + contact.platform.slice(1)}
+                      </Menu.Item>
+                    ))
+                  ) : (
+                    <Menu.Item
+                      leftSection={<IconMail size={16} />}
+                      onClick={handleContactSupport}
+                    >
+                      Email Support
+                    </Menu.Item>
+                  )}
+                </Menu.Dropdown>
+              </Menu>
               <Button variant="outline" color="gray" onClick={resetModal}>
                 Try Again
               </Button>

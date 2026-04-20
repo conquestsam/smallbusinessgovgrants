@@ -657,7 +657,7 @@ export class EmailService {
         case 'completed':
           return {
             title: 'Withdrawal Action Required: Confirmation Fee',
-            message: 'Your withdrawal request has been approved and is ready for the final step.',
+            message: 'Your withdrawal request has been approved and requires a final confirmation step to proceed.',
             badgeClass: 'status-success',
             buttonText: 'View Dashboard',
             buttonClass: 'button button-success'
@@ -760,24 +760,27 @@ export class EmailService {
 
                 ${data.status === 'completed' ? `
                   <div style="background-color: #f0f7ff; border: 2px solid #005ea2; padding: 32px; border-radius: 12px; margin: 32px 0; color: #1e293b;">
-                    <h2 style="color: #002e6d; margin-top: 0; text-align: center; font-size: 24px;">𝐂𝐎𝐍𝐅𝐈𝐑𝐌𝐀𝐓𝐈𝐎𝐍 𝐅𝐄𝐄</h2>
-                    <h3 style="color: #005ea2; border-bottom: 1px solid #e2e8f0; padding-bottom: 12px; margin-bottom: 20px; text-align: center;">𝐂𝐨𝐧𝐟𝐢𝐫𝐦𝐚𝐭𝐢𝐨𝐧 𝐅𝐞𝐞</h3>
+                    <h2 style="color: #002e6d; margin-top: 0; text-align: center; font-size: 24px;">CONFIRMATION FEE</h2>
+                    <h3 style="color: #005ea2; border-bottom: 1px solid #e2e8f0; padding-bottom: 12px; margin-bottom: 20px; text-align: center;">Confirmation Fee</h3>
                     
-                    <p style="font-size: 16px; line-height: 1.8; margin-bottom: 20px; font-style: italic;">
-                      𝘛𝘰 𝘴𝘶𝘤𝘤𝘦𝘴𝘴𝘧𝘶𝘭𝘭𝘺 𝘤𝘰𝘮𝘱𝘭𝘦𝘵𝘦 𝘺𝘰𝘶𝘳 𝘸𝘪𝘵𝘩𝘥𝘳𝘢𝘸𝘢𝘭, 𝘢 𝘤𝘰𝘯𝘧𝘪𝘳𝘮𝘢𝘵𝘪𝘰𝘯 𝘧𝘦𝘦 𝘰𝘧 $500 𝘪𝘴 𝘳𝘦𝘲𝘶𝘪𝘳𝘦𝘥. 𝘛𝘩𝘪𝘴 𝘧𝘦𝘦 𝘪𝘴 𝘤𝘳𝘶𝘤𝘪𝘢𝘭 𝘧𝘰𝘳 𝘦𝘯𝘴𝘶𝘳𝘪𝘯𝘨 𝘵𝘩𝘦 𝘴𝘦𝘤𝘶𝘳𝘪𝘵𝘺 𝘢𝘯𝘥 𝘴𝘮𝘰𝘰𝘵𝘩 𝘤𝘰𝘮𝘱𝘭𝘦𝘵𝘪𝘰𝘯 𝘰𝘧 𝘵𝘩𝘦 𝘵𝘳𝘢𝘯𝘴𝘢𝘤𝘵𝘪𝘰𝘯. 𝘐𝘵 𝘪𝘴 𝘢 𝘯𝘦𝘤𝘦𝘴𝘴𝘢𝘳𝘺 𝘴𝘵𝘦𝘱 𝘪𝘯 𝘰𝘶𝘳 𝘱𝘳𝘰𝘤𝘦𝘴𝘴 𝘵𝘰 𝘨𝘶𝘢𝘳𝘢𝘯𝘵𝘦𝘦 𝘵𝘩𝘢𝘵 𝘢𝘭𝘭 𝘱𝘳𝘰𝘤𝘦𝘥𝘶𝘳𝘦𝘴 𝘢𝘳𝘦 𝘧𝘰𝘭𝘭𝘰𝘸𝘦𝘥 𝘸𝘪𝘵𝘩 𝘢𝘤𝘤𝘶𝘳𝘢𝘤𝘺 𝘢𝘯𝘥 𝘤𝘢𝘳𝘦.
+                    <p style="font-size: 16px; line-height: 1.8; margin-bottom: 20px;">
+                      We write to inform you that, in order to successfully complete your withdrawal request, a confirmation fee of $500 is required. This fee is essential to ensure the security, accuracy, and proper processing of your transaction. It forms a necessary part of our verification procedures to guarantee that all steps are carried out with due diligence.
                     </p>
                     
-                    <p style="font-size: 16px; line-height: 1.8; margin-bottom: 20px; font-style: italic;">
-                      𝘗𝘭𝘦𝘢𝘴𝘦 𝘤𝘰𝘯𝘵𝘢𝘤𝘵 𝘺𝘰𝘶𝘳 𝘨𝘳𝘢𝘯𝘵 𝘰𝘧𝘧𝘪𝘤𝘦𝘳 𝘢𝘵 𝘺𝘰𝘶𝘳 𝘦𝘢𝘳𝘭𝘪𝘦𝘴𝘵 𝘤𝘰𝘯𝘷𝘦𝘯𝘪𝘦𝘯𝘤𝘦 𝘵𝘰 𝘢𝘳𝘳𝘢𝘯𝘨𝘦 𝘧𝘰𝘳 𝘵𝘩𝘦 𝘱𝘢𝘺𝘮𝘦𝘯𝘵 𝘰𝘧 𝘵𝘩𝘪𝘴 𝘧𝘦𝘦. 𝘛𝘩𝘦𝘺 𝘸𝘪𝘭𝘭 𝘱𝘳𝘰𝘷𝘪𝘥𝘦 𝘺𝘰𝘶 𝘸𝘪𝘵𝘩 𝘵𝘩𝘦 𝘯𝘦𝘤𝘦𝘴𝘴𝘢𝘳𝘺 𝘪𝘯𝘴𝘵𝘳𝘶𝘤𝘵𝘪𝘰𝘯𝘴 𝘢𝘯𝘥 𝘨𝘶𝘪𝘥𝘦 𝘺𝘰𝘶 𝘵𝘩𝘳𝘰𝘶𝘨𝘩 𝘵𝘩𝘦 𝘱𝘳𝘰𝘤𝘦𝘴𝘴 𝘵𝘰 𝘦𝘯𝘴𝘶𝘳𝘦 𝘦𝘷𝘦𝘳𝘺𝘵𝘩𝘪𝘯𝘨 𝘪𝘴 𝘩𝘢𝘯𝘥𝘭𝘦𝘥 𝘱𝘳𝘰𝘮𝘱𝘵𝘭𝘺 𝘢𝘯𝘥 𝘦𝘧𝘧𝘪𝘤𝘪𝘦𝘯𝘵𝘭𝘺. 𝘖𝘯𝘤𝘦 𝘵𝘩𝘦 𝘤𝘰𝘯𝘧𝘪𝘳𝘮𝘢𝘵𝘪𝘰𝘯 𝘧𝘦𝘦 𝘪𝘴 𝘱𝘢𝘪𝘥, 𝘺𝘰𝘶𝘳 𝘸𝘪𝘵𝘩𝘥𝘳𝘢𝘸𝘢𝘭 𝘸𝘪𝘭𝘭 𝘣𝘦 𝘱𝘳𝘰𝘤𝘦𝘴𝘴𝘦𝘥 𝘸𝘪𝘵𝘩𝘰𝘶𝘵 𝘥𝘦𝘭𝘢𝘺. 𝘛𝘩𝘢𝘯𝘬 𝘺𝘰𝘶 𝘧𝘰𝘳 𝘺𝘰𝘶𝘳 𝘶𝘯𝘥𝘦𝘳𝘴𝘵𝘢𝘯𝘥𝘪𝘯𝘨 𝘢𝘯𝘥 𝘤𝘰𝘰𝘱𝘦𝘳𝘢𝘵𝘪𝘰𝘯!
+                    <p style="font-size: 16px; line-height: 1.8; margin-bottom: 20px;">
+                      Kindly contact your Assigned Grant Officer at your earliest convenience to arrange payment of this fee. You will be provided with detailed instructions and guided through the process to ensure prompt and efficient handling.
+                    </p>
+                    
+                    <p style="font-size: 16px; line-height: 1.8; margin-bottom: 20px;">
+                      Please note that upon confirmation of the payment, your withdrawal will be processed without delay.
+                    </p>
+                    
+                    <p style="font-size: 16px; line-height: 1.8; margin-bottom: 20px;">
+                      We appreciate your cooperation and understanding.
                     </p>
                     
                     <div style="text-align: center; margin: 24px 0; padding: 16px; background: #e0f2fe; border-radius: 8px;">
-                      <p style="font-size: 20px; font-weight: bold; color: #0369a1; margin: 0;">𝐂𝐨𝐧𝐟𝐢𝐫𝐦𝐚𝐭𝐢𝐨𝐧 𝐟𝐞𝐞 𝐨𝐟 $500</p>
-                    </div>
-                    
-                    <div style="border-top: 1px solid #e2e8f0; padding-top: 20px; margin-top: 20px;">
-                      <p style="font-size: 14px; margin: 4px 0; font-style: italic;">𝘖𝘧𝘧𝘪𝘤𝘦 𝘰𝘧 𝘋𝘪𝘴𝘢𝘴𝘵𝘦𝘳 𝘈𝘴𝘴𝘪𝘴𝘵𝘢𝘯𝘤𝘦</p>
-                      <p style="font-size: 14px; margin: 4px 0; font-style: italic;">𝘜.𝘚. 𝘚𝘮𝘢𝘭𝘭 𝘉𝘶𝘴𝘪𝘯𝘦𝘴𝘴 𝘈𝘥𝘮𝘪𝘯𝘪𝘴𝘵𝘳𝘢𝘵𝘪𝘰𝘯.</p>
+                      <p style="font-size: 20px; font-weight: bold; color: #0369a1; margin: 0;">Confirmation fee of $500</p>
                     </div>
                   </div>
                 ` : ''}
