@@ -100,7 +100,22 @@ export class EmailService {
     html: string;
     from?: string;
   }): Promise<void> {
-    // --- Attempt 1: Gmail SMTP (Primary) ---
+    // --- Attempt 1: Resend (Primary) ---
+    try {
+      const from = options.from || 'SBA Grant <noreply@info.smallbusinessgovgrants.com>';
+      await resend.emails.send({
+        from,
+        to: options.to,
+        subject: options.subject,
+        html: options.html,
+      });
+      console.log(`[EmailService] ✅ Sent via Resend to ${options.to}`);
+      return;
+    } catch (resendError: any) {
+      console.warn(`[EmailService] ⚠️ Resend failed for ${options.to}:`, resendError?.message || resendError);
+    }
+
+    // --- Attempt 2: Gmail SMTP (Fallback) ---
     try {
       const transporter = getGmailTransporter();
       if (transporter) {
@@ -110,27 +125,13 @@ export class EmailService {
           subject: options.subject,
           html: options.html,
         });
-        console.log(`[EmailService] ✅ Sent via Gmail SMTP to ${options.to}`);
+        console.log(`[EmailService] ✅ Sent via Gmail SMTP fallback to ${options.to}`);
         return;
       }
-      console.warn('[EmailService] ⚠️ Gmail config missing, skipping to Resend fallback');
+      console.warn('[EmailService] ⚠️ Gmail config missing, both methods failed');
     } catch (gmailError: any) {
-      console.warn(`[EmailService] ⚠️ Gmail SMTP failed for ${options.to}:`, gmailError?.message || gmailError);
-    }
-
-    // --- Attempt 2: Resend (Fallback) ---
-    try {
-      const from = options.from || 'SBA Grant System <noreply@notifications.sbasmallbusinessgrants.com>';
-      await resend.emails.send({
-        from,
-        to: options.to,
-        subject: options.subject,
-        html: options.html,
-      });
-      console.log(`[EmailService] ✅ Sent via Resend fallback to ${options.to}`);
-    } catch (resendError: any) {
-      console.error(`[EmailService] ❌ Both Gmail and Resend failed for ${options.to}:`, {
-        resendMessage: resendError?.message || resendError
+      console.error(`[EmailService] ❌ Both Resend and Gmail failed for ${options.to}:`, {
+        gmailMessage: gmailError?.message || gmailError
       });
     }
   }
